@@ -42,8 +42,9 @@ def gamma_transform(img, *, mode, gamma=0.45):
     return Image.fromarray(img.astype('uint8'), mode=mode)
 
 
-#def cummulative_histogram(img, mode, *, histogram):
-
+def cummulative_histogram(histogram):
+    cumulative_histogram = np.cumsum(histogram)
+    return cumulative_histogram / np.sum(histogram)
 
 
 def task1_1():
@@ -53,14 +54,14 @@ def task1_1():
 
     fig, axs = plt.subplots(1, 5, figsize=(15, 8))
     for i, gamma_woman in enumerate(gamma_women):
-        axs[i].imshow(gamma_transform(gamma_woman, mode='L', gamma=0.5), cmap="gray", aspect='auto', vmax=255, vmin=0)
+        axs[i].imshow(gamma_woman, cmap="gray", aspect='auto', vmax=255, vmin=0)
         axs[i].set_title(f"Gamma={gammas[i]}")
     fig.suptitle('Task 1.1, grayscale')
     fig.show()
 
 
 def task1_2():
-    autumn = Image.open("Week1/Images//autumn.tif")
+    autumn = Image.open("Week1/Images/autumn.tif")
     gamma_transform_autumn = gamma_transform(autumn, mode='RGB', gamma=0.45)
 
     fig, axs = plt.subplots(1, 2, figsize=(15, 8))
@@ -73,7 +74,7 @@ def task1_2():
     fig.show()
 
 def task1_3():
-    autumn = Image.open("Week1/Images//autumn.tif")
+    autumn = Image.open("Week1/Images/autumn.tif")
     hsv_autumn = autumn.convert('HSV')
     gamma_corrected_hsv = gamma_transform(hsv_autumn, mode='HSV', gamma=0.45)
 
@@ -85,8 +86,27 @@ def task1_3():
     fig.suptitle('Task 1.3')
     fig.show()
 
+
+def task2_1():
+    pout = Image.open("Week1/Images/pout.tif")
+    gray_pout = pout.convert('L')
+    bins = range(256)
+    hist, _ = np.histogram(gray_pout, bins=bins)
+    cumhist = cummulative_histogram(hist)
+
+    fig, axs = plt.subplots(1, 3, figsize=(15, 8))
+    axs[0].imshow(gray_pout, cmap="gray", aspect='auto', vmax=255, vmin=0)
+    axs[0].set_title("Original image")
+
+    axs[1].hist(np.array(gray_pout).flatten(), bins=bins)
+    axs[1].set_title("Histogram")
+
+    axs[2].plot(cumhist)
+    axs[2].set_title("CDF")
+
 if __name__ == '__main__':
     task1_1()
-    task1_2()
-    task1_3()
+    # task1_2()
+    # task1_3()
+    task2_1()
     plt.show()
