@@ -7,7 +7,7 @@ from matplotlib.pyplot import imshow
 
 
 
-def gamma_transform(img, mode, *, gamma=0.45):
+def gamma_transform(img, *, mode, gamma=0.45):
     """
     Performs gamma-correction
     Material: Computer Vision Szeliski ch. 2
@@ -42,39 +42,51 @@ def gamma_transform(img, mode, *, gamma=0.45):
     return Image.fromarray(img.astype('uint8'), mode=mode)
 
 
+#def cummulative_histogram(img, mode, *, histogram):
+
+
+
 def task1_1():
     woman = Image.open("Week1/Images//woman.jpg").convert('L')
+    gammas = [0.25, 0.5, 0.75, 1, 2]
+    gamma_women = [gamma_transform(woman, mode='L', gamma=gamma) for gamma in gammas]
 
     fig, axs = plt.subplots(1, 5, figsize=(15, 8))
-    axs[0].imshow(gamma_transform(woman, 'L', gamma=2).convert(mode='RGB'), cmap="gray", aspect='auto', vmax=255, vmin=0)
-    axs[1].imshow(woman, cmap="gray", aspect='auto', vmax=255, vmin=0)
-    axs[2].imshow(gamma_transform(woman, 'L', gamma=0.75), cmap="gray", aspect='auto', vmax=255, vmin=0)
-    axs[3].imshow(gamma_transform(woman, 'L', gamma=0.5), cmap="gray", aspect='auto', vmax=255, vmin=0)
-    axs[4].imshow(gamma_transform(woman, 'L', gamma=0.25), cmap="gray", aspect='auto', vmax=255, vmin=0)
-
-    plt.show()
+    for i, gamma_woman in enumerate(gamma_women):
+        axs[i].imshow(gamma_transform(gamma_woman, mode='L', gamma=0.5), cmap="gray", aspect='auto', vmax=255, vmin=0)
+        axs[i].set_title(f"Gamma={gammas[i]}")
+    fig.suptitle('Task 1.1, grayscale')
+    fig.show()
 
 
 def task1_2():
     autumn = Image.open("Week1/Images//autumn.tif")
+    gamma_transform_autumn = gamma_transform(autumn, mode='RGB', gamma=0.45)
+
     fig, axs = plt.subplots(1, 2, figsize=(15, 8))
     axs[0].imshow(autumn, aspect='auto')
-    axs[1].imshow(gamma_transform(autumn, mode='RGB'), aspect='auto', interpolation='nearest')
-    # gamma_transform(autumn).save("lol.jpg")
+    axs[0].set_title("Original image")
 
-    plt.show()
+    axs[1].imshow(gamma_transform_autumn, aspect='auto', interpolation='nearest')
+    axs[1].set_title("Gamma=0.45, RGB")
+    fig.suptitle('Task 1.2')
+    fig.show()
 
 def task1_3():
     autumn = Image.open("Week1/Images//autumn.tif")
     hsv_autumn = autumn.convert('HSV')
     gamma_corrected_hsv = gamma_transform(hsv_autumn, mode='HSV', gamma=0.45)
+
     fig, axs = plt.subplots(1, 2, figsize=(15, 8))
     axs[0].imshow(autumn, aspect='auto')
+    axs[0].set_title("Original image")
     axs[1].imshow(gamma_corrected_hsv, aspect='auto', vmin=0, vmax=100)
-
-    plt.show()
+    axs[1].set_title("Gamma=0.45, HSV")
+    fig.suptitle('Task 1.3')
+    fig.show()
 
 if __name__ == '__main__':
     task1_1()
     task1_2()
     task1_3()
+    plt.show()
