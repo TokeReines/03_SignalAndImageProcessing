@@ -46,6 +46,11 @@ def cummulative_histogram(histogram):
     cumulative_histogram = np.cumsum(histogram)
     return cumulative_histogram / np.sum(histogram)
 
+def floating_point_img(img, cdf):
+    img = np.array(img)
+    fp_img = img * cdf[img]
+    return fp_img
+
 
 def task1_1():
     woman = Image.open("Week1/Images//woman.jpg").convert('L')
@@ -103,10 +108,29 @@ def task2_1():
 
     axs[2].plot(cumhist)
     axs[2].set_title("CDF")
+    fig.suptitle('Task 2.1')
+    fig.show()
+
+def task2_2():
+    pout = Image.open("Week1/Images/pout.tif")
+    gray_pout = pout.convert('L')
+
+    bins = range(256)
+    hist, _ = np.histogram(gray_pout, bins=bins)
+    cumhist = cummulative_histogram(hist)
+    fp_img = floating_point_img(gray_pout, cumhist)
+
+    fig, axs = plt.subplots(1, 2, figsize=(15, 8))
+    axs[0].imshow(gray_pout, cmap="gray", aspect='auto', vmax=255, vmin=0)
+    axs[0].set_title("Original image")
+
+    axs[1].imshow(fp_img, cmap="gray", aspect='auto', vmax=255, vmin=0)
+    axs[1].set_title("Floating Point image")
 
 if __name__ == '__main__':
     task1_1()
-    # task1_2()
-    # task1_3()
+    task1_2()
+    task1_3()
     task2_1()
+    task2_2()
     plt.show()
