@@ -307,12 +307,13 @@ def filter(img=None, mode='mean', kernel_size=3):
 
     if mode == 'GAUSS':
         # filtering.pdf -> slide 21
-        stddev = 2
+        stddev = k
         mean = 1
         xs = np.linspace(-(k - 1 )/ 2., (k - 1) /2., k)
         x, y = np.meshgrid(xs, xs)
 
         kernel = ( 1 / (2 * np.pi * stddev**2)) * np.exp( -(x**2 + y**2) / (2 * stddev**2) )
+        kernel = kernel / np.sum(kernel)
         img = convolve2d(img, kernel)
 
     return Image.fromarray(img.astype('uint8'))
@@ -385,13 +386,13 @@ def task3_1():
     #axs[2,2].set_title("Mean Filter run time, Gauss")
 
 if __name__ == '__main__':
-    task1_1()
-    task1_2()
-    task1_3()
 
-    task2_1()
-    task2_2()
-    task2_3()
-    task2_4()
+    #task1_2()
+    #task1_3()
+#
+    #task2_1()
+    #task2_2()
+    #task2_3()
+    #task2_4()
     task3_1()
     plt.show()
