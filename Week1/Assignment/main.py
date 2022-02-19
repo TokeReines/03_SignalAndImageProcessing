@@ -44,7 +44,8 @@ def gamma_transform(img, *, mode, gamma=0.45):
 
 def cummulative_histogram(histogram):
     cumulative_histogram = np.cumsum(histogram)
-    return cumulative_histogram / np.sum(histogram)
+    return cumulative_histogram / np.sum(histogram)  # Equal to x / NM (dimensions of image) for each x in the histogram
+
 
 def floating_point_img(img, cdf):
     img = np.array(img)
@@ -120,17 +121,25 @@ def task2_2():
     cumhist = cummulative_histogram(hist)
     fp_img = floating_point_img(gray_pout, cumhist)
 
-    fig, axs = plt.subplots(1, 2, figsize=(15, 8))
+    fig, axs = plt.subplots(1, 4, figsize=(15, 8))
     axs[0].imshow(gray_pout, cmap="gray", aspect='auto', vmax=255, vmin=0)
     axs[0].set_title("Original image")
 
-    axs[1].imshow(fp_img, cmap="gray", aspect='auto', vmax=255, vmin=0)
-    axs[1].set_title("Floating Point image")
+    axs[1].hist(np.array(gray_pout).flatten(), bins=bins)
+    axs[1].set_title("Original Histogram")
+
+    axs[2].imshow(fp_img, cmap="gray", aspect='auto', vmax=255, vmin=0)
+    axs[2].set_title("Floating Point image")
+
+    axs[3].hist(np.array(fp_img).flatten(), bins=bins)
+    axs[3].set_title("Floating Point Histogram")
+    fig.show()
 
 if __name__ == '__main__':
     task1_1()
     task1_2()
     task1_3()
+
     task2_1()
     task2_2()
     plt.show()
