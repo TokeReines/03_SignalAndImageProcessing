@@ -4,7 +4,6 @@ import matplotlib.pyplot as plt
 from matplotlib.colors import hsv_to_rgb
 from matplotlib.pyplot import imshow
 from pyasn1.type.univ import Integer
-from scipy import signal, misc
 import math
 import random
 import timeit
