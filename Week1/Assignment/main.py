@@ -267,7 +267,7 @@ def random_noise(img, mode='gauss', noise_percentage=0.08):
     return Image.fromarray(img.astype('uint8'))
 
 
-def convolve2d(img, kernel, padding=2, sigma=None):
+def convolve2d(img, kernel, padding=2):
     img = np.pad(img, pad_width=padding)
     m, n = img.shape
     x, y = kernel.shape
@@ -280,7 +280,8 @@ def convolve2d(img, kernel, padding=2, sigma=None):
 
     return new_img[1:-padding, 1:-padding]
 
-def filter(img=None, mode='mean', kernel_size=3):
+
+def filter(img=None, mode='mean', kernel_size=3, sigma=None):
     if img is None:
         img = Image.open("Week1/Images/eight.tif").convert('L')
         
@@ -309,10 +310,10 @@ def filter(img=None, mode='mean', kernel_size=3):
         # filtering.pdf -> slide 21
         if sigma is not None:
             k = 3 * sigma 
-            stddev = sigma ¨
+            stddev = sigma
+        else:
+            stddev = 5 
 
-        stddev = 5 
-        mean = 1
         xs = np.linspace(-(k - 1 )/ 2., (k - 1) /2., k)
         x, y = np.meshgrid(xs, xs)
 
@@ -328,7 +329,7 @@ def task3_1():
     eight_sp = random_noise(eight, mode='SP')
     eight_gauss = random_noise(eight, mode='GAUSS')
 
-    kernel_size = 3
+    kernel_size = 7
 
     fig, axs = plt.subplots(3, 3, figsize=(24, 13))
     axs[0,0].imshow(eight, cmap="gray", aspect='auto', vmax=255, vmin=0)
