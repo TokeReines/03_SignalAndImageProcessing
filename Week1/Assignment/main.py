@@ -198,9 +198,10 @@ def task2_4():
     pp = math.floor(p*255)
     color = cdf_templ_inverse[pp]
 
-    c2 = floating_point_img(src, cdf_src)
-    hist2_inverse, _ = np.histogram(c2 * 255, bins=bins)
-    corrected_cdf = cummulative_histogram(hist2_inverse)
+    matched = floating_point_img(src, cdf_src)
+    hist2_inverse, _ = np.histogram(matched * 255, bins=bins)
+    cdf_matched = cummulative_histogram(hist2_inverse)
+
     timeit.timeit()
     fig, axs = plt.subplots(2, 3, figsize=(15, 8))
     axs[0][0].imshow(src, cmap="gray", aspect='auto', vmax=255, vmin=0)
@@ -209,32 +210,30 @@ def task2_4():
     axs[0][1].imshow(templ, cmap="gray", aspect='auto', vmax=255, vmin=0)
     axs[0][1].set_title("Template")
 
-    axs[0][2].imshow(c2 * 255, cmap="gray", aspect='auto', vmax=255, vmin=0)
+    axs[0][2].imshow(matched * 255, cmap="gray", aspect='auto', vmax=255, vmin=0)
     axs[0][2].set_title("Matched")
 
-    l1, = axs[1][0].plot(cdf_src, color='b', label="Source")
-    l2,  = axs[1][0].plot(cdf_templ, color='r', label="Template")
-    # l3, = axs[1][0].plot(cdf_src_inverse * 255, color='g', label="Inverse")
+    l1, = axs[1][0].plot(cdf_src * 255, color='b', label="Source")
     axs[1][0].set_title("CDF")
     axs[1][0].set_ylabel("Cumulative intensity")
     axs[1][0].set_xlabel("Pixel intensitiy")
-    axs[1][0].legend(handles=[l1, l2])
+    axs[1][0].legend(handles=[l1])
 
-    l1, = axs[1][1].plot(cdf_src, color='b', label="Source")
-    l2,  = axs[1][1].plot(cdf_templ, color='r', label="Template")
-    # l3, = axs[1][0].plot(cdf_src_inverse * 255, color='g', label="Inverse")
-    axs[1][0].set_title("CDF")
-    axs[1][0].set_ylabel("Cumulative intensity")
-    axs[1][0].set_xlabel("Pixel intensitiy")
-    axs[1][0].legend(handles=[l1, l2])
+    l1, = axs[1][1].plot(cdf_templ * 255, color='gray', label="Template")
+    axs[1][1].set_title("CDF")
+    axs[1][1].set_ylabel("Cumulative intensity")
+    axs[1][1].set_xlabel("Pixel intensitiy")
+    axs[1][1].legend(handles=[l1])
 
-    #l1, = axs[1][1].plot(hist_src, color='b', label="Source")
-    # l2,  = axs[1][1].plot(hist_templ, color='r', label="Template")
-    # l3, = axs[1][1].plot(hist_templ_inverse, color='g', label="Inverse")
-    # axs[1][1].set_title("Histograms")
-    # axs[1][1].set_ylabel("Cumulative %")
-    # axs[1][1].set_xlabel("Pixel intensitiy")
-    # axs[1][1].legend(handles=[l2, l3])
+    l1, = axs[1][2].plot(cdf_matched * 255, color='g', label="Matched")
+    l2, = axs[1][2].plot(cdf_templ_inverse, color='y', label="Template Inverse")
+    l3,  = axs[1][2].plot(cdf_src * 255, color='b', label="Source")
+    l4,  = axs[1][2].plot(cdf_templ * 255, color='orange', label="Template")
+    axs[1][2].set_title("CDF")
+    axs[1][2].set_ylabel("Cumulative intensity")
+    axs[1][2].set_xlabel("Pixel intensitiy")
+    axs[1][2].legend(handles=[l1, l2, l3, l4])
+
 
     fig.show()
 ### Task 3
@@ -362,32 +361,32 @@ def task3_1():
 
     
     executions = 1
-    #for img in images.keys():
-        #ts[img] = []
-    #ts['eight_sp'] = []
-    #for k in tqdm.tqdm(kernel_sizes):    
-    #    cumulated_time = 0
-    #    for _ in tqdm.trange(executions):
-    #        starttime = timeit.default_timer()
-    #        filter(images['eight_sp'], kernel_size=k)
-    #        cumulated_time += timeit.default_timer() - starttime
-    #    ts['eight_sp'].append(cumulated_time / executions)
-#
-    #print(ts)
-    #axs[2,0].scatter(kernel_sizes, ts['eight'])
-    #axs[2,0].set_yticks(np.linspace(0., 1., 10))
-    #axs[2,0].set_xticks(kernel_sizes)
-    #axs[2,0].set_title("Mean filter run time")
+    for img in images.keys():
+        ts[img] = []
+    ts['eight_sp'] = []
+    for k in tqdm.tqdm(kernel_sizes):
+       cumulated_time = 0
+       for _ in tqdm.trange(executions):
+           starttime = timeit.default_timer()
+           filter(images['eight_sp'], kernel_size=k)
+           cumulated_time += timeit.default_timer() - starttime
+       ts['eight_sp'].append(cumulated_time / executions)
 
-    #axs[2,1].scatter(kernel_sizes, ts['eight_sp'])
-    #axs[2,1].set_yticks(np.linspace(0., 1., 10))
-    #axs[2,1].set_xticks(kernel_sizes)
-    #axs[2,1].set_title("Mean filter run time, SP")
+    print(ts)
+    axs[2,0].scatter(kernel_sizes, ts['eight'])
+    axs[2,0].set_yticks(np.linspace(0., 1., 10))
+    axs[2,0].set_xticks(kernel_sizes)
+    axs[2,0].set_title("Mean filter run time")
 
-    #axs[2,2].scatter(kernel_sizes, ts['eight_gauss'])
-    #axs[2,2].set_yticks(np.linspace(0., 1., 10))
-    #axs[2,2].set_xticks(kernel_sizes)
-    #axs[2,2].set_title("Mean Filter run time, Gauss")
+    axs[2,1].scatter(kernel_sizes, ts['eight_sp'])
+    axs[2,1].set_yticks(np.linspace(0., 1., 10))
+    axs[2,1].set_xticks(kernel_sizes)
+    axs[2,1].set_title("Mean filter run time, SP")
+
+    axs[2,2].scatter(kernel_sizes, ts['eight_gauss'])
+    axs[2,2].set_yticks(np.linspace(0., 1., 10))
+    axs[2,2].set_xticks(kernel_sizes)
+    axs[2,2].set_title("Mean Filter run time, Gauss")
 
 if __name__ == '__main__':
 
@@ -397,6 +396,6 @@ if __name__ == '__main__':
     #task2_1()
     #task2_2()
     #task2_3()
-    #task2_4()
-    task3_1()
+    task2_4()
+    # task3_1()
     plt.show()
