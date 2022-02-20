@@ -4,7 +4,6 @@ import matplotlib.pyplot as plt
 from matplotlib.colors import hsv_to_rgb
 from matplotlib.pyplot import imshow
 from pyasn1.type.univ import Integer
-from scipy import signal, misc
 import math
 import random
 import timeit
@@ -253,12 +252,12 @@ def random_noise(img, mode='gauss', noise_percentage=0.08):
     row, col = img.shape
     pixels = row * col
     if mode == 'SP':
-        amount_random_pixels = random.randint(round(pixels*0.02), round(pixels*noise_percentage))
+        amount_random_pixels = round(pixels*noise_percentage)
         for i in range(amount_random_pixels):
             random_pixel = (random.randint(0, row-1), random.randint(0, col-1))
-            img[random_pixel] = random.choice((0,1))
+            img[random_pixel] = random.choice((0,255))
 
-    elif mode == 'GAUSS':
+    elif mode == 'GAUSS': 
         mean = 0.
         stddev = 5.
         img = img + np.random.normal(mean, stddev, (row, col))
@@ -280,7 +279,8 @@ def convolve2d(img, kernel, padding=2):
 
     return new_img[1:-padding, 1:-padding]
 
-def filter(img=None, mode='mean', kernel_size=3):
+
+def filter(img=None, mode='mean', kernel_size=3, sigma=None):
     if img is None:
         img = Image.open("Week1/Images/eight.tif").convert('L')
         
@@ -307,12 +307,17 @@ def filter(img=None, mode='mean', kernel_size=3):
 
     if mode == 'GAUSS':
         # filtering.pdf -> slide 21
-        stddev = 2
-        mean = 1
+        if sigma is not None:
+            k = 3 * sigma 
+            stddev = sigma
+        else:
+            stddev = 5 
+
         xs = np.linspace(-(k - 1 )/ 2., (k - 1) /2., k)
         x, y = np.meshgrid(xs, xs)
 
         kernel = ( 1 / (2 * np.pi * stddev**2)) * np.exp( -(x**2 + y**2) / (2 * stddev**2) )
+        kernel = kernel / np.sum(kernel)
         img = convolve2d(img, kernel)
 
     return Image.fromarray(img.astype('uint8'))
@@ -323,7 +328,7 @@ def task3_1():
     eight_sp = random_noise(eight, mode='SP')
     eight_gauss = random_noise(eight, mode='GAUSS')
 
-    kernel_size = 3
+    kernel_size = 7
 
     fig, axs = plt.subplots(3, 3, figsize=(24, 13))
     axs[0,0].imshow(eight, cmap="gray", aspect='auto', vmax=255, vmin=0)
@@ -335,14 +340,25 @@ def task3_1():
     axs[0,2].imshow(eight_gauss, cmap="gray", aspect="auto", vmax=255, vmin=0)
     axs[0,2].set_title("Gaussian Noise")
 
-    axs[1,0].imshow(filter(eight, kernel_size=kernel_size, mode='GAUSS'), cmap="gray", aspect="auto", vmax=255, vmin=0)
+    axs[1,0].imshow(filter(eight, kernel_size=kernel_size, mode='mean'), cmap="gray", aspect="auto", vmax=255, vmin=0)
     axs[1,0].set_title("Mean Filter, normal")
 
-    axs[1,1].imshow(filter(eight_sp, kernel_size=kernel_size, mode='GAUSS'), cmap="gray", aspect="auto", vmax=255, vmin=0)
+    axs[1,1].imshow(filter(eight_sp, kernel_size=kernel_size, mode='mean'), cmap="gray", aspect="auto", vmax=255, vmin=0)
     axs[1,1].set_title("Mean Filter, SP")
 
-    axs[1,2].imshow(filter(eight_gauss, kernel_size=kernel_size, mode='GAUSS'), cmap="gray", aspect="auto", vmax=255, vmin=0)
-    axs[1,2].set_title("Mean Filter, Gauss")
+    axs[1,2].imshow(filter(eight_gauss, kernel_size=kernel_size, mode='mean'), cmap="gray", aspect="auto", vmax=255, vmin=0)
+    axs[1,2].set_title("Mean Filter, Gauss Noise")
+
+    axs[2,0].imshow(filter(eight, kernel_size=kernel_size, mode='median'), cmap="gray", aspect="auto", vmax=255, vmin=0)
+    axs[2,0].set_title("Median Filter, normal")
+
+    axs[2,1].imshow(filter(eight_sp, kernel_size=kernel_size, mode='median'), cmap="gray", aspect="auto", vmax=255, vmin=0)
+    axs[2,1].set_title("Median Filter, SP")
+
+    axs[2,2].imshow(filter(eight_gauss, kernel_size=kernel_size, mode='median'), cmap="gray", aspect="auto", vmax=255, vmin=0)
+    axs[2,2].set_title("Median Filter, Gauss Noise")
+
+
 
     
     images = {  'eight' : eight,
@@ -357,41 +373,38 @@ def task3_1():
 
     
     executions = 1
-    #for img in images.keys():
-        #ts[img] = []
-    #ts['eight_sp'] = []
-    #for k in tqdm.tqdm(kernel_sizes):    
-    #    cumulated_time = 0
-    #    for _ in tqdm.trange(executions):
-    #        starttime = timeit.default_timer()
-    #        filter(images['eight_sp'], kernel_size=k)
-    #        cumulated_time += timeit.default_timer() - starttime
-    #    ts['eight_sp'].append(cumulated_time / executions)
-#
-    #print(ts)
-    #axs[2,0].scatter(kernel_sizes, ts['eight'])
-    #axs[2,0].set_yticks(np.linspace(0., 1., 10))
-    #axs[2,0].set_xticks(kernel_sizes)
-    #axs[2,0].set_title("Mean filter run time")
+    for img in images.keys():
+        ts[img] = []
+        for k in tqdm.tqdm(kernel_sizes):    
+            cumulated_time = 0
+            for _ in tqdm.trange(executions):
+                starttime = timeit.default_timer()
+                filter(images['eight_sp'], kernel_size=k)
+                cumulated_time += timeit.default_timer() - starttime
+            ts[img].append(cumulated_time / executions)
 
-    #axs[2,1].scatter(kernel_sizes, ts['eight_sp'])
-    #axs[2,1].set_yticks(np.linspace(0., 1., 10))
-    #axs[2,1].set_xticks(kernel_sizes)
-    #axs[2,1].set_title("Mean filter run time, SP")
-
-    #axs[2,2].scatter(kernel_sizes, ts['eight_gauss'])
-    #axs[2,2].set_yticks(np.linspace(0., 1., 10))
-    #axs[2,2].set_xticks(kernel_sizes)
-    #axs[2,2].set_title("Mean Filter run time, Gauss")
+    print(ts)
+    axs[2,0].scatter(kernel_sizes, ts['eight'])
+    axs[2,0].set_yticks(np.linspace(0., 1., 10))
+    axs[2,0].set_xticks(kernel_sizes)
+    axs[2,0].set_title("Mean filter run time")
+    axs[2,1].scatter(kernel_sizes, ts['eight_sp'])
+    axs[2,1].set_yticks(np.linspace(0., 1., 10))
+    axs[2,1].set_xticks(kernel_sizes)
+    axs[2,1].set_title("Mean filter run time, SP")
+    axs[2,2].scatter(kernel_sizes, ts['eight_gauss'])
+    axs[2,2].set_yticks(np.linspace(0., 1., 10))
+    axs[2,2].set_xticks(kernel_sizes)
+    axs[2,2].set_title("Mean Filter run time, Gauss")
 
 if __name__ == '__main__':
-    task1_1()
-    task1_2()
-    task1_3()
 
-    task2_1()
-    task2_2()
-    task2_3()
-    task2_4()
+    #task1_2()
+    #task1_3()
+#
+    #task2_1()
+    #task2_2()
+    #task2_3()
+    #task2_4()
     task3_1()
     plt.show()
