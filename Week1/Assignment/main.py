@@ -253,12 +253,12 @@ def random_noise(img, mode='gauss', noise_percentage=0.08):
     row, col = img.shape
     pixels = row * col
     if mode == 'SP':
-        amount_random_pixels = random.randint(round(pixels*0.02), round(pixels*noise_percentage))
+        amount_random_pixels = round(pixels*noise_percentage)
         for i in range(amount_random_pixels):
             random_pixel = (random.randint(0, row-1), random.randint(0, col-1))
-            img[random_pixel] = random.choice((0,1))
+            img[random_pixel] = random.choice((0,255))
 
-    elif mode == 'GAUSS':
+    elif mode == 'GAUSS': 
         mean = 0.
         stddev = 5.
         img = img + np.random.normal(mean, stddev, (row, col))
@@ -267,7 +267,7 @@ def random_noise(img, mode='gauss', noise_percentage=0.08):
     return Image.fromarray(img.astype('uint8'))
 
 
-def convolve2d(img, kernel, padding=2):
+def convolve2d(img, kernel, padding=2, sigma=None):
     img = np.pad(img, pad_width=padding)
     m, n = img.shape
     x, y = kernel.shape
@@ -307,7 +307,11 @@ def filter(img=None, mode='mean', kernel_size=3):
 
     if mode == 'GAUSS':
         # filtering.pdf -> slide 21
-        stddev = k
+        if sigma is not None:
+            k = 3 * sigma 
+            stddev = sigma ¨
+
+        stddev = 5 
         mean = 1
         xs = np.linspace(-(k - 1 )/ 2., (k - 1) /2., k)
         x, y = np.meshgrid(xs, xs)
