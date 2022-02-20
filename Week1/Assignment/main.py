@@ -1,3 +1,5 @@
+from typing import Tuple, Any
+
 from PIL import Image, ImageOps, ImageFilter
 import numpy as np
 import matplotlib.pyplot as plt
@@ -8,6 +10,7 @@ import math
 import random
 import timeit
 import tqdm
+
 
 def gamma_transform(img, *, mode, gamma=0.45):
     """
@@ -46,32 +49,46 @@ def gamma_transform(img, *, mode, gamma=0.45):
 
 def cummulative_histogram(histogram) -> np.array:
     cumulative_histogram = np.cumsum(histogram)
-    return cumulative_histogram / int(cumulative_histogram.max())  # Equal to x / NM (dimensions of image) for each x in the histogram
+    return (cumulative_histogram / int(cumulative_histogram.max()) * 255).astype(
+        'uint8')  # Equal to x / NM (dimensions of image) for each x in the histogram
 
 
-def histogram_match(image1, image2):
+def histogram_match(source, template) -> Tuple[Any, Any, Any, Any, Any]:
+    """
+    Returns:
+        (CDF of source,
+         CDF of template,
+         CDF of template inverse,
+         CDF of matched image,
+         Matched image)
+
+    """
     bins = range(256)
 
-    hist1, _ = np.histogram(image1, bins=bins)
-    cdf1 = cummulative_histogram(hist1)
+    hist_src, _ = np.histogram(source, bins=bins)
+    hist_templ, _ = np.histogram(template, bins=bins)
 
-    hist2, _ = np.histogram(image2, bins=bins)
-    cdf2 = cummulative_histogram(hist2)
-    for i, x in enumerate(cdf1):
-        hist2[i] = pesudo_inverse_floating_point_img(cdf2, x)
+    cdf_src = cummulative_histogram(hist_src)
+    cdf_templ = cummulative_histogram(hist_templ)
 
-    corrected_cdf = cummulative_histogram(hist2)
-    c2 = floating_point_img(image2, corrected_cdf)
-    return c2
-    # interp = np.interp(c1, c2_inverse, np.unique(image2, return_counts=True)[0])
-    # im2 = interp(im.flatten(), bins[:-1], cdf)
+    cdf_templ_inverse = hist_templ.copy()
+    for i, x in enumerate(cdf_src):
+        cdf_templ_inverse[i] = cummulative_histogram_inverse(cdf_templ, x)
+
+    matched = floating_point_img(source, cdf_templ_inverse)
+    hist2_inverse, _ = np.histogram(matched, bins=bins)
+    cdf_matched = cummulative_histogram(hist2_inverse)
+
+    return cdf_src, cdf_templ, cdf_templ_inverse, cdf_matched, matched
+
 
 def floating_point_img(img, cdf) -> np.array:
     img = np.array(img)
     fp_img = cdf[img]
     return fp_img
 
-def pesudo_inverse_floating_point_img(cumhist, probability: float) -> int:
+
+def cummulative_histogram_inverse(cumhist, probability: float) -> int:
     """
     The CDF is in general not invertible due to it's possible plateaus, which would result in a range of intensities.
     To accommodate this, we extract the minimum intensity of the possible plateau.
@@ -145,6 +162,7 @@ def task2_1():
     fig.suptitle('Task 2.1')
     fig.show()
 
+
 def task2_2():
     pout = Image.open("Week1/Images/pout.tif")
     gray_pout = pout.convert('L')
@@ -161,48 +179,20 @@ def task2_2():
     axs[1].hist(np.array(gray_pout).flatten(), bins=bins)
     axs[1].set_title("Original Histogram")
 
-    axs[2].imshow(fp_img * 255, cmap="gray", aspect='auto', vmax=255, vmin=0)
+    axs[2].imshow(fp_img, cmap="gray", aspect='auto', vmax=255, vmin=0)
     axs[2].set_title("Floating Point image")
 
-    axs[3].hist(np.array(fp_img).flatten() * 255, bins=bins)
+    axs[3].hist(np.array(fp_img).flatten(), bins=bins)
     axs[3].set_title("Floating Point Histogram")
     fig.show()
 
-def task2_3():
-    pout = Image.open("Week1/Images/pout.tif")
-    gray_pout = pout.convert('L')
-
-    bins = range(256)
-    hist, _ = np.histogram(gray_pout, bins=bins)
-    cumhist = cummulative_histogram(hist)
-    fp_img = pesudo_inverse_floating_point_img(cumhist, 0.6)
-
 
 def task2_4():
-    src = Image.open("Week1/Images/autumn.tif").convert('L')
-    templ = Image.open("Week1/Images/pout.tif").convert('L')
+    templ = Image.open("Week1/Images/autumn.tif").convert('L')
+    src = Image.open("Week1/Images/pout.tif").convert('L')
 
-    bins = range(256)
+    cdf_src, cdf_templ, cdf_templ_inverse, cdf_matched, matched = histogram_match(src, templ)
 
-    hist_src, _ = np.histogram(src, bins=bins)
-    hist_templ, _ = np.histogram(templ, bins=bins)
-
-    cdf_src = cummulative_histogram(hist_src)
-    cdf_templ = cummulative_histogram(hist_templ)
-
-    cdf_templ_inverse = hist_templ.copy()
-    for i, x in enumerate(cdf_src):
-        cdf_templ_inverse[i] = pesudo_inverse_floating_point_img(cdf_templ, x)
-
-    p = 0.50
-    pp = math.floor(p*255)
-    color = cdf_templ_inverse[pp]
-
-    matched = floating_point_img(src, cdf_src)
-    hist2_inverse, _ = np.histogram(matched * 255, bins=bins)
-    cdf_matched = cummulative_histogram(hist2_inverse)
-
-    timeit.timeit()
     fig, axs = plt.subplots(2, 3, figsize=(15, 8))
     axs[0][0].imshow(src, cmap="gray", aspect='auto', vmax=255, vmin=0)
     axs[0][0].set_title("Source")
@@ -210,36 +200,36 @@ def task2_4():
     axs[0][1].imshow(templ, cmap="gray", aspect='auto', vmax=255, vmin=0)
     axs[0][1].set_title("Template")
 
-    axs[0][2].imshow(matched * 255, cmap="gray", aspect='auto', vmax=255, vmin=0)
+    axs[0][2].imshow(matched, cmap="gray", aspect='auto', vmax=255, vmin=0)
     axs[0][2].set_title("Matched")
 
-    l1, = axs[1][0].plot(cdf_src * 255, color='b', label="Source")
+    l1, = axs[1][0].plot(cdf_src / 255, color='b', label="Source")
     axs[1][0].set_title("CDF")
     axs[1][0].set_ylabel("Cumulative intensity")
     axs[1][0].set_xlabel("Pixel intensitiy")
     axs[1][0].legend(handles=[l1])
 
-    l1, = axs[1][1].plot(cdf_templ * 255, color='gray', label="Template")
+    l1, = axs[1][1].plot(cdf_templ / 255, color='orange', label="Template")
+    l2, = axs[1][1].plot(cdf_templ_inverse / 255, color='purple', label="Inverse")
     axs[1][1].set_title("CDF")
     axs[1][1].set_ylabel("Cumulative intensity")
     axs[1][1].set_xlabel("Pixel intensitiy")
-    axs[1][1].legend(handles=[l1])
+    axs[1][1].legend(handles=[l1, l2])
 
-    l1, = axs[1][2].plot(cdf_matched * 255, color='g', label="Matched")
-    l2, = axs[1][2].plot(cdf_templ_inverse, color='y', label="Template Inverse")
-    l3,  = axs[1][2].plot(cdf_src * 255, color='b', label="Source")
-    l4,  = axs[1][2].plot(cdf_templ * 255, color='orange', label="Template")
+    l1, = axs[1][2].plot(cdf_src / 255, color='b', label="Source")
+    l2, = axs[1][2].plot(cdf_templ / 255, color='orange', label="Template")
+    l3, = axs[1][2].plot(cdf_matched / 255, color='g', label="Matched")
     axs[1][2].set_title("CDF")
     axs[1][2].set_ylabel("Cumulative intensity")
     axs[1][2].set_xlabel("Pixel intensitiy")
-    axs[1][2].legend(handles=[l1, l2, l3, l4])
-
+    axs[1][2].legend(handles=[l1, l2, l3])
 
     fig.show()
+
+
 ### Task 3
 
 def random_noise(img, mode='gauss', noise_percentage=0.08):
-
     mode = str(mode).upper()
 
     if not isinstance(img, np.ndarray):
@@ -251,12 +241,12 @@ def random_noise(img, mode='gauss', noise_percentage=0.08):
     row, col = img.shape
     pixels = row * col
     if mode == 'SP':
-        amount_random_pixels = round(pixels*noise_percentage)
+        amount_random_pixels = round(pixels * noise_percentage)
         for i in range(amount_random_pixels):
-            random_pixel = (random.randint(0, row-1), random.randint(0, col-1))
-            img[random_pixel] = random.choice((0,255))
+            random_pixel = (random.randint(0, row - 1), random.randint(0, col - 1))
+            img[random_pixel] = random.choice((0, 255))
 
-    elif mode == 'GAUSS': 
+    elif mode == 'GAUSS':
         mean = 0.
         stddev = 5.
         img = img + np.random.normal(mean, stddev, (row, col))
@@ -265,16 +255,16 @@ def random_noise(img, mode='gauss', noise_percentage=0.08):
     return Image.fromarray(img.astype('uint8'))
 
 
-def convolve2d(img, kernel, padding=2):
+def convolve2d(img, kernel, padding=4):
     img = np.pad(img, pad_width=padding)
     m, n = img.shape
     x, y = kernel.shape
-    
+
     new_img = np.zeros((m - x, n - y))
 
     for i in range(new_img.shape[0]):
         for j in range(new_img.shape[1]):
-            new_img[i][j] = np.sum(img[i:i+x, j:j+y] * kernel) + 1
+            new_img[i][j] = np.sum(img[i:i + x, j:j + y] * kernel) + 1
 
     return new_img[1:-padding, 1:-padding]
 
@@ -282,7 +272,7 @@ def convolve2d(img, kernel, padding=2):
 def filter(img=None, mode='mean', kernel_size=3, sigma=None):
     if img is None:
         img = Image.open("Week1/Images/eight.tif").convert('L')
-        
+
     k = kernel_size
     mode = str(mode.upper())
 
@@ -296,7 +286,7 @@ def filter(img=None, mode='mean', kernel_size=3, sigma=None):
 
     if mode == 'MEAN':
         # Discrete mean filter kernel (n X m, actually nxn)
-        kernel = np.ones([k, k], dtype=int) / (k*k)
+        kernel = np.ones([k, k], dtype=int) / (k * k)
         img = convolve2d(img, kernel)
 
     if mode == 'MEDIAN':
@@ -307,15 +297,15 @@ def filter(img=None, mode='mean', kernel_size=3, sigma=None):
     if mode == 'GAUSS':
         # filtering.pdf -> slide 21
         if sigma is not None:
-            k = 3 * sigma 
+            k = 3 * sigma
             stddev = sigma
         else:
-            stddev = 5 
+            stddev = 1
 
-        xs = np.linspace(-(k - 1 )/ 2., (k - 1) /2., k)
+        xs = np.linspace(-(k - 1) / 2., (k - 1) / 2., k)
         x, y = np.meshgrid(xs, xs)
 
-        kernel = ( 1 / (2 * np.pi * stddev**2)) * np.exp( -(x**2 + y**2) / (2 * stddev**2) )
+        kernel = (1 / (2 * np.pi * stddev ** 2)) * np.exp(-(x ** 2 + y ** 2) / (2 * stddev ** 2))
         kernel = kernel / np.sum(kernel)
         img = convolve2d(img, kernel)
 
@@ -327,75 +317,194 @@ def task3_1():
     eight_sp = random_noise(eight, mode='SP')
     eight_gauss = random_noise(eight, mode='GAUSS')
 
-    kernel_size = 7
+    kernel_size = 25
 
     fig, axs = plt.subplots(3, 3, figsize=(24, 13))
-    axs[0,0].imshow(eight, cmap="gray", aspect='auto', vmax=255, vmin=0)
-    axs[0,0].set_title("Original image")
+    axs[0, 0].imshow(eight, cmap="gray", aspect='auto', vmax=255, vmin=0)
+    axs[0, 0].set_title("Original image")
 
-    axs[0,1].imshow(eight_sp, cmap="gray", aspect="auto", vmax=255, vmin=0)
-    axs[0,1].set_title("Salt & Pepper(SP) Noise")
+    axs[0, 1].imshow(eight_sp, cmap="gray", aspect="auto", vmax=255, vmin=0)
+    axs[0, 1].set_title("Salt & Pepper(SP) Noise")
 
-    axs[0,2].imshow(eight_gauss, cmap="gray", aspect="auto", vmax=255, vmin=0)
-    axs[0,2].set_title("Gaussian Noise")
+    axs[0, 2].imshow(eight_gauss, cmap="gray", aspect="auto", vmax=255, vmin=0)
+    axs[0, 2].set_title("Gaussian Noise")
 
-    axs[1,0].imshow(filter(eight, kernel_size=kernel_size, mode='GAUSS'), cmap="gray", aspect="auto", vmax=255, vmin=0)
-    axs[1,0].set_title("Mean Filter, normal")
+    axs[1, 0].imshow(filter(eight, kernel_size=kernel_size, mode='MEAN'), cmap="gray", aspect="auto", vmax=255, vmin=0)
+    axs[1, 0].set_title("Mean Filter, normal")
 
-    axs[1,1].imshow(filter(eight_sp, kernel_size=kernel_size, mode='GAUSS'), cmap="gray", aspect="auto", vmax=255, vmin=0)
-    axs[1,1].set_title("Mean Filter, SP")
+    axs[1, 1].imshow(filter(eight_sp, kernel_size=kernel_size, mode='MEAN'), cmap="gray", aspect="auto", vmax=255,
+                     vmin=0)
+    axs[1, 1].set_title("Mean Filter, SP")
 
-    axs[1,2].imshow(filter(eight_gauss, kernel_size=kernel_size, mode='GAUSS'), cmap="gray", aspect="auto", vmax=255, vmin=0)
-    axs[1,2].set_title("Mean Filter, Gauss")
+    axs[1, 2].imshow(filter(eight_gauss, kernel_size=kernel_size, mode='MEAN'), cmap="gray", aspect="auto", vmax=255,
+                     vmin=0)
+    axs[1, 2].set_title("Mean Filter, Gauss")
 
-    
-    images = {  'eight' : eight,
-                'eight_sp' : eight_sp,
-                'eight_gauss' : eight_gauss
-             }
+    axs[2, 0].imshow(filter(eight, kernel_size=kernel_size, mode='MEDIAN'), cmap="gray", aspect="auto", vmax=255,
+                     vmin=0)
+    axs[2, 0].set_title("Mean Filter, normal")
 
+    axs[2, 1].imshow(filter(eight_sp, kernel_size=kernel_size, mode='MEDIAN'), cmap="gray", aspect="auto", vmax=255,
+                     vmin=0)
+    axs[2, 1].set_title("Mean Filter, SP")
 
-    kernel_sizes = np.arange(1,26)
+    axs[2, 2].imshow(filter(eight_gauss, kernel_size=kernel_size, mode='MEDIAN'), cmap="gray", aspect="auto", vmax=255,
+                     vmin=0)
+    axs[2, 2].set_title("Mean Filter, Gauss")
+
+    images = {'eight': eight,
+              'eight_sp': eight_sp,
+              'eight_gauss': eight_gauss
+              }
+
+    kernel_sizes = np.arange(1, 26)
 
     ts = {}
+    #
+    # executions = 1
+    # for img in images.keys():
+    #     ts[img] = []
+    # ts['eight_sp'] = []
+    # for k in tqdm.tqdm(kernel_sizes):
+    #     cumulated_time = 0
+    #     for _ in tqdm.trange(executions):
+    #         starttime = timeit.default_timer()
+    #         filter(images['eight_sp'], kernel_size=k)
+    #         cumulated_time += timeit.default_timer() - starttime
+    #     ts['eight_sp'].append(cumulated_time / executions)
+    #
+    # print(ts)
+    # axs[2, 0].scatter(kernel_sizes, ts['eight'])
+    # axs[2, 0].set_yticks(np.linspace(0., 1., 10))
+    # axs[2, 0].set_xticks(kernel_sizes)
+    # axs[2, 0].set_title("Mean filter run time")
+    #
+    # axs[2, 1].scatter(kernel_sizes, ts['eight_sp'])
+    # axs[2, 1].set_yticks(np.linspace(0., 1., 10))
+    # axs[2, 1].set_xticks(kernel_sizes)
+    # axs[2, 1].set_title("Mean filter run time, SP")
+    #
+    # axs[2, 2].scatter(kernel_sizes, ts['eight_gauss'])
+    # axs[2, 2].set_yticks(np.linspace(0., 1., 10))
+    # axs[2, 2].set_xticks(kernel_sizes)
+    # axs[2, 2].set_title("Mean Filter run time, Gauss")
 
-    
-    executions = 1
-    for img in images.keys():
-        ts[img] = []
-    ts['eight_sp'] = []
-    for k in tqdm.tqdm(kernel_sizes):
-       cumulated_time = 0
-       for _ in tqdm.trange(executions):
-           starttime = timeit.default_timer()
-           filter(images['eight_sp'], kernel_size=k)
-           cumulated_time += timeit.default_timer() - starttime
-       ts['eight_sp'].append(cumulated_time / executions)
 
-    print(ts)
-    axs[2,0].scatter(kernel_sizes, ts['eight'])
-    axs[2,0].set_yticks(np.linspace(0., 1., 10))
-    axs[2,0].set_xticks(kernel_sizes)
-    axs[2,0].set_title("Mean filter run time")
 
-    axs[2,1].scatter(kernel_sizes, ts['eight_sp'])
-    axs[2,1].set_yticks(np.linspace(0., 1., 10))
-    axs[2,1].set_xticks(kernel_sizes)
-    axs[2,1].set_title("Mean filter run time, SP")
+def apply_kernel(img, l, k, sigma, tau):
+    imgnew = np.zeros(img.shape)
+    floor_l = int(np.floor(l / 2))
+    floor_k = int(np.floor(k / 2))
+    for x in range(floor_l, img.shape[0] - floor_l):
+        for y in range(floor_k, img.shape[1] - floor_k):
+            sum = 0
+            for i in range(-floor_l, floor_l + 1):
+                for j in range(-floor_k, floor_k + 1):
+                    u = float(img[x + i, y + j]) - float(img[x, y])
+                    f = np.exp(-((i ** 2 + j ** 2) / ((2 * sigma) ** 2)))
+                    g = np.exp(-((u ** 2) / ((2 * tau) ** 2)))
+                    weight = float(f) * float(g)
+                    sum += (float(weight) * float(img[x + i, y + j])) / float(weight)
+                    imgnew[x, y] = sum
 
-    axs[2,2].scatter(kernel_sizes, ts['eight_gauss'])
-    axs[2,2].set_yticks(np.linspace(0., 1., 10))
-    axs[2,2].set_xticks(kernel_sizes)
-    axs[2,2].set_title("Mean Filter run time, Gauss")
+    return imgnew
+
+def g(tau, u):
+    return np.exp(-u ** 2 / 2 * tau ** 2)
+
+
+def f(sigma, x, y):
+    return np.exp(-(x ** 2 + y ** 2) / (2 * sigma ** 2))
+
+
+def w(img, x, y, i, j, *, sigma=2, tau=2):
+    f_val = f(sigma, i, j)
+    g_val = g(tau, img[x + i][y + j] - img[x][y])
+    return f_val * g_val
+
+
+def bilateral_filtering(img, window_size, *, sigma=2, tau=2):
+    img = np.array(img)
+
+    if len(img.shape) != 2:
+        raise Exception("Image is not in grayscale")
+
+    height, width = img.shape
+    new_img = np.zeros(img.shape)
+
+    k = l = window_size
+
+    def _bilateral_filtering(x, y):
+        numerator = 0
+        denominator = 0
+        for i in range(-(l // 2), l // 2 + 1):
+            if i < 0 or i + x == height:
+                continue
+
+            for j in range(-(k // 2), k // 2 + 1):
+                if j < 0 or j + y == width:
+                    continue
+
+                try:
+                    w_value = w(img, x, y, i, j, sigma=sigma, tau=tau)
+                    numerator += w_value * img[x + i][y + j]
+                    denominator += w_value
+                except Exception as e:
+                    a = 2
+
+        return numerator / denominator
+
+    for x in range(img.shape[0]):
+        for y in range(img.shape[1]):
+            new_img[x][y] = _bilateral_filtering(x, y)
+            a = img[x][y]
+            b = new_img[x][y]
+            c = 2
+
+    return new_img
+
+
+
+def task4_2():
+    """
+    Returns filtered image
+    """
+    eight = np.array(Image.open("Week1/Images/eight.tif").convert('L'))
+    eight_gauss = np.array(random_noise(eight, mode='GAUSS'))
+    eight_gauss_norm = eight_gauss
+    sigmas = [64, 128, 256, 512]#8, 16, 32]
+    taus = [0.05, 0.05, 0.05, 0.05]
+
+    window_size = 3
+
+    fig, axs = plt.subplots(4, 4, figsize=(15, 8))
+    for i, (sigma, tau) in enumerate(zip(sigmas, taus)):
+        eight_bil_filtered = bilateral_filtering(eight_gauss_norm, window_size, sigma=sigma, tau=tau)
+        gauss_filter = np.array(filter(eight_gauss, kernel_size=window_size, mode='GAUSS'))
+        diff = eight_bil_filtered - eight_gauss_norm
+
+        axs[i][0].imshow(eight_gauss_norm, cmap="gray", aspect='auto', vmax=255, vmin=0)
+        axs[i][0].set_title("Source with Gauss noice")
+
+        axs[i][1].imshow(eight_bil_filtered, cmap="gray", aspect='auto', vmax=255, vmin=0)
+        axs[i][1].set_title(f"Bilateral filtered. Sigma: {sigma}, Tau: {tau}")
+
+        axs[i][2].imshow(gauss_filter, cmap="gray", aspect='auto', vmax=255, vmin=0)
+        axs[i][2].set_title(f"Gaussian filtered")
+
+        axs[i][3].imshow(diff, cmap="gray", aspect='auto', vmax=255, vmin=0)
+        axs[i][3].set_title("Difference (Bilateral - Gauss)")
+
 
 if __name__ == '__main__':
+    # task1_1()
+    # ask1_2()
+    # task1_3()
 
-    #task1_2()
-    #task1_3()
-#
-    #task2_1()
-    #task2_2()
-    #task2_3()
-    task2_4()
+    # task2_1()
+    # task2_2()
+    # task2_4()
     # task3_1()
+
+    task4_2()
     plt.show()
