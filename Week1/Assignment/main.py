@@ -149,23 +149,20 @@ def task2_1():
     hist, _ = np.histogram(pout, bins=bins)
     cumhist = cummulative_histogram(hist)
 
-    fig, axs = plt.subplots(1, 3, figsize=(15, 8))
+    fig, axs = plt.subplots(1, 2, figsize=(15, 8))
     axs[0].imshow(pout, cmap="gray", aspect='auto', vmax=255, vmin=0)
-    axs[0].set_xlabel('Intensity value')
-    axs[0].set_ylabel('p(v)')
+
     axs[0].set_title("Original image")
 
-    axs[1].plot(cumhist, color='b')
     axs[1].hist(np.array(pout).flatten(), bins=bins, density=True)
-    axs[1].set_title("cdf")
-    axs[1].set_xlabel('Intensity value')
-    axs[1].set_ylabel('Fraction of pixels')
-
-    axs[2].plot(cumhist, color='b')
-    axs[2].hist(np.array(pout).flatten(), bins=bins, density=True)
-    axs[2].set_title("Histogram and cdf")
-    axs[2].set_xlabel('Intensity value')
-    axs[2].set_ylabel('Fraction of pixels')
+    axs[1].set_ylabel("Fraction of pixels")
+    axs[1].set_xlabel("Intensity value")
+    axs[1].tick_params(axis='y', labelcolor='b')
+    ax2 = axs[1].twinx()
+    ax2.plot(cumhist / 255, color='r')
+    ax2.set_ylabel('Cumulative distribution function')
+    ax2.tick_params(axis='y', labelcolor='r')
+    axs[1].set_title("Histogram and CDF")
 
     fig.suptitle('Task 2.1')
     fig.show()
