@@ -308,18 +308,21 @@ def filter(img=None, mode='mean', kernel_size=3, sigma=None):
     if mode == 'GAUSS':
         # filtering.pdf -> slide 21
         if sigma is not None:
-            k = 3 * sigma 
+            k = 3 * sigma
             stddev = sigma
         else:
-            stddev = 5 
+            stddev = 10
 
-        xs = np.linspace(-(k - 1 )/ 2., (k - 1) /2., k)
+        xs = np.linspace(-(k - 1) / 2., (k - 1) / 2., k)
         x, y = np.meshgrid(xs, xs)
 
-        kernel = ( 1 / (2 * np.pi * stddev**2)) * np.exp( -(x**2 + y**2) / (2 * stddev**2) )
+        kernel = (1 / (2 * np.pi * stddev ** 2)) * np.exp(-(x ** 2 + y ** 2) / (2 * stddev ** 2))
         kernel = kernel / np.sum(kernel)
         img = convolve2d(img, kernel)
 
+        fig = plt.figure()
+        plt.imshow(kernel, cmap='gray')
+        plt.show()
     return Image.fromarray(img.astype('uint8'))
 
 
@@ -328,7 +331,7 @@ def task3_1():
     eight_sp = random_noise(eight, mode='SP')
     eight_gauss = random_noise(eight, mode='GAUSS')
 
-    kernel_size = 7
+    kernel_size = 11
 
     fig, axs = plt.subplots(3, 3, figsize=(24, 13))
     axs[0,0].imshow(eight, cmap="gray", aspect='auto', vmax=255, vmin=0)
@@ -349,13 +352,13 @@ def task3_1():
     axs[1,2].imshow(filter(eight_gauss, kernel_size=kernel_size, mode='mean'), cmap="gray", aspect="auto", vmax=255, vmin=0)
     axs[1,2].set_title("Mean Filter, Gauss Noise")
 
-    axs[2,0].imshow(filter(eight, kernel_size=kernel_size, mode='median'), cmap="gray", aspect="auto", vmax=255, vmin=0)
+    axs[2,0].imshow(filter(eight, kernel_size=kernel_size, mode='Gauss'), cmap="gray", aspect="auto", vmax=255, vmin=0)
     axs[2,0].set_title("Median Filter, normal")
 
-    axs[2,1].imshow(filter(eight_sp, kernel_size=kernel_size, mode='median'), cmap="gray", aspect="auto", vmax=255, vmin=0)
+    axs[2,1].imshow(filter(eight_sp, kernel_size=kernel_size, mode='Gauss'), cmap="gray", aspect="auto", vmax=255, vmin=0)
     axs[2,1].set_title("Median Filter, SP")
 
-    axs[2,2].imshow(filter(eight_gauss, kernel_size=kernel_size, mode='median'), cmap="gray", aspect="auto", vmax=255, vmin=0)
+    axs[2,2].imshow(filter(eight_gauss, kernel_size=kernel_size, mode='Gauss'), cmap="gray", aspect="auto", vmax=255, vmin=0)
     axs[2,2].set_title("Median Filter, Gauss Noise")
 
 
@@ -372,30 +375,30 @@ def task3_1():
     ts = {}
 
     
-    executions = 1
-    for img in images.keys():
-        ts[img] = []
-        for k in tqdm.tqdm(kernel_sizes):    
-            cumulated_time = 0
-            for _ in tqdm.trange(executions):
-                starttime = timeit.default_timer()
-                filter(images['eight_sp'], kernel_size=k)
-                cumulated_time += timeit.default_timer() - starttime
-            ts[img].append(cumulated_time / executions)
+    # executions = 1
+    # for img in images.keys():
+    #     ts[img] = []
+    #     for k in tqdm.tqdm(kernel_sizes):    
+    #         cumulated_time = 0
+    #         for _ in tqdm.trange(executions):
+    #             starttime = timeit.default_timer()
+    #             filter(images['eight_sp'], kernel_size=k)
+    #             cumulated_time += timeit.default_timer() - starttime
+    #         ts[img].append(cumulated_time / executions)
 
-    print(ts)
-    axs[2,0].scatter(kernel_sizes, ts['eight'])
-    axs[2,0].set_yticks(np.linspace(0., 1., 10))
-    axs[2,0].set_xticks(kernel_sizes)
-    axs[2,0].set_title("Mean filter run time")
-    axs[2,1].scatter(kernel_sizes, ts['eight_sp'])
-    axs[2,1].set_yticks(np.linspace(0., 1., 10))
-    axs[2,1].set_xticks(kernel_sizes)
-    axs[2,1].set_title("Mean filter run time, SP")
-    axs[2,2].scatter(kernel_sizes, ts['eight_gauss'])
-    axs[2,2].set_yticks(np.linspace(0., 1., 10))
-    axs[2,2].set_xticks(kernel_sizes)
-    axs[2,2].set_title("Mean Filter run time, Gauss")
+    # print(ts)
+    # axs[2,0].scatter(kernel_sizes, ts['eight'])
+    # axs[2,0].set_yticks(np.linspace(0., 1., 10))
+    # axs[2,0].set_xticks(kernel_sizes)
+    # axs[2,0].set_title("Mean filter run time")
+    # axs[2,1].scatter(kernel_sizes, ts['eight_sp'])
+    # axs[2,1].set_yticks(np.linspace(0., 1., 10))
+    # axs[2,1].set_xticks(kernel_sizes)
+    # axs[2,1].set_title("Mean filter run time, SP")
+    # axs[2,2].scatter(kernel_sizes, ts['eight_gauss'])
+    # axs[2,2].set_yticks(np.linspace(0., 1., 10))
+    # axs[2,2].set_xticks(kernel_sizes)
+    # axs[2,2].set_title("Mean Filter run time, Gauss")
 
 if __name__ == '__main__':
 
