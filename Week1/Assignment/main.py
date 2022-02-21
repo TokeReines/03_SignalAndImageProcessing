@@ -34,7 +34,7 @@ def gamma_transform(img, *, mode, gamma=0.45):
             img[:, :, 2] = ((img[:, :, 2] / 255) ** gamma) * 255
         elif mode == 'HSV':
             # HSV gamma-correction for V-slice
-            img[:, :, 2] = ((img[:, :, 1] / 100) ** gamma) * 100
+            img[:, :, 2] = ((img[:, :, 2] / 255) ** gamma) * 255
         else:
             raise Exception("Bad image format")
 
@@ -117,7 +117,7 @@ def task1_1():
 
 def task1_2():
     autumn = Image.open("Week1/Images/autumn.tif")
-    gamma_transform_autumn = gamma_transform(autumn, mode='RGB', gamma=0.45)
+    gamma_transform_autumn = gamma_transform(autumn, mode='RGB', gamma=0.75)
 
     fig, axs = plt.subplots(1, 2, figsize=(15, 8))
     axs[0].imshow(autumn, aspect='auto')
@@ -132,7 +132,7 @@ def task1_2():
 def task1_3():
     autumn = Image.open("Week1/Images/autumn.tif")
     hsv_autumn = autumn.convert('HSV')
-    gamma_corrected_hsv = gamma_transform(hsv_autumn, mode='HSV', gamma=0.45)
+    gamma_corrected_hsv = gamma_transform(hsv_autumn, mode='HSV', gamma=0.75)
 
     fig, axs = plt.subplots(1, 2, figsize=(15, 8))
     axs[0].imshow(autumn, aspect='auto')
@@ -149,15 +149,23 @@ def task2_1():
     hist, _ = np.histogram(pout, bins=bins)
     cumhist = cummulative_histogram(hist)
 
-    fig, axs = plt.subplots(1, 2, figsize=(15, 8))
+    fig, axs = plt.subplots(1, 3, figsize=(15, 8))
     axs[0].imshow(pout, cmap="gray", aspect='auto', vmax=255, vmin=0)
+    axs[0].set_xlabel('Intensity value')
+    axs[0].set_ylabel('p(v)')
     axs[0].set_title("Original image")
 
     axs[1].plot(cumhist, color='b')
     axs[1].hist(np.array(pout).flatten(), bins=bins, density=True)
-    axs[1].set_title("Histogram and cdf")
+    axs[1].set_title("cdf")
     axs[1].set_xlabel('Intensity value')
     axs[1].set_ylabel('Fraction of pixels')
+
+    axs[2].plot(cumhist, color='b')
+    axs[2].hist(np.array(pout).flatten(), bins=bins, density=True)
+    axs[2].set_title("Histogram and cdf")
+    axs[2].set_xlabel('Intensity value')
+    axs[2].set_ylabel('Fraction of pixels')
 
     fig.suptitle('Task 2.1')
     fig.show()
@@ -498,13 +506,13 @@ def task4_2():
 
 if __name__ == '__main__':
     # task1_1()
-    # ask1_2()
-    # task1_3()
+    #task1_2()
+    #task1_3()
 
-    # task2_1()
-    # task2_2()
+    task2_1()
+    #task2_2()
     # task2_4()
     # task3_1()
 
-    task4_2()
+    #task4_2()
     plt.show()
