@@ -1,5 +1,6 @@
 from typing import Tuple, Any
 
+import skimage
 from PIL import Image, ImageOps, ImageFilter
 import numpy as np
 import matplotlib.pyplot as plt
@@ -231,6 +232,59 @@ def task2_4():
 
     fig.show()
 
+def task2_5():
+    src = Image.open("Week1/Images/pout.tif").convert('L')
+    src = np.array(src)
+    templ = np.linspace(0, 255, num=src.size).astype('uint8')
+    templ = np.reshape(templ, src.shape)
+
+    bins = range(256)
+    cdf_src, cdf_templ, cdf_templ_inverse, cdf_matched, matched = histogram_match(src, templ)
+    eq_hist_img = skimage.exposure.equalize_hist(src) * 255
+
+    hist_templ, _ = np.histogram(eq_hist_img, bins=bins)
+    cdf_templ = cummulative_histogram(hist_templ)
+
+    fig, axs = plt.subplots(2, 4, figsize=(15, 8))
+    axs[0][0].imshow(src, cmap="gray", aspect='auto', vmax=255, vmin=0)
+    axs[0][0].set_title("Source")
+
+    axs[0][3].imshow(eq_hist_img,  cmap="gray", aspect='auto', vmax=255, vmin=0)
+    axs[0][3].set_title("skimage.exposure.equalize_hist")
+    l1, = axs[1][3].plot(cdf_templ / 255, label="skimage")
+    axs[1][3].set_title("CDF")
+    axs[1][3].set_xlabel("Pixel intensitiy")
+    axs[1][3].legend(handles=[l1])
+
+    axs[0][1].imshow(templ, cmap="gray", aspect='auto', vmax=255, vmin=0)
+    axs[0][1].set_title("Template")
+
+    axs[0][2].imshow(matched, cmap="gray", aspect='auto', vmax=255, vmin=0)
+    axs[0][2].set_title("Matched")
+
+    l1, = axs[1][0].plot(cdf_src / 255, color='b', label="Source")
+    axs[1][0].set_title("CDF")
+    axs[1][0].set_ylabel("Cumulative intensity")
+    axs[1][0].set_xlabel("Pixel intensitiy")
+    axs[1][0].legend(handles=[l1])
+
+    l1, = axs[1][1].plot(cdf_templ / 255, color='orange', label="Template")
+    l2, = axs[1][1].plot(cdf_templ_inverse / 255, color='purple', label="Inverse")
+    axs[1][1].set_title("CDF")
+    axs[1][1].set_ylabel("Cumulative intensity")
+    axs[1][1].set_xlabel("Pixel intensitiy")
+    axs[1][1].legend(handles=[l1, l2])
+
+    l1, = axs[1][2].plot(cdf_src / 255, color='b', label="Source")
+    l2, = axs[1][2].plot(cdf_templ / 255, color='orange', label="Template")
+    l3, = axs[1][2].plot(cdf_matched / 255, color='g', label="Matched")
+    axs[1][2].set_title("CDF")
+    axs[1][2].set_ylabel("Cumulative intensity")
+    axs[1][2].set_xlabel("Pixel intensitiy")
+    axs[1][2].legend(handles=[l1, l2, l3])
+
+    fig.show()
+
 
 ### Task 3
 
@@ -394,26 +448,6 @@ def task3_1():
     # axs[2, 2].set_xticks(kernel_sizes)
     # axs[2, 2].set_title("Mean Filter run time, Gauss")
 
-
-
-def apply_kernel(img, l, k, sigma, tau):
-    imgnew = np.zeros(img.shape)
-    floor_l = int(np.floor(l / 2))
-    floor_k = int(np.floor(k / 2))
-    for x in range(floor_l, img.shape[0] - floor_l):
-        for y in range(floor_k, img.shape[1] - floor_k):
-            sum = 0
-            for i in range(-floor_l, floor_l + 1):
-                for j in range(-floor_k, floor_k + 1):
-                    u = float(img[x + i, y + j]) - float(img[x, y])
-                    f = np.exp(-((i ** 2 + j ** 2) / ((2 * sigma) ** 2)))
-                    g = np.exp(-((u ** 2) / ((2 * tau) ** 2)))
-                    weight = float(f) * float(g)
-                    sum += (float(weight) * float(img[x + i, y + j])) / float(weight)
-                    imgnew[x, y] = sum
-
-    return imgnew
-
 def g(tau, u):
     return np.exp(-u ** 2 / 2 * tau ** 2)
 
@@ -424,7 +458,7 @@ def f(sigma, x, y):
 
 def w(img, x, y, i, j, *, sigma=2, tau=2):
     f_val = f(sigma, i, j)
-    g_val = g(tau, img[x + i][y + j] - img[x][y])
+    g_val = g(tau, int(img[x + i][y + j]) - int(img[x][y]))
     return f_val * g_val
 
 
@@ -450,21 +484,15 @@ def bilateral_filtering(img, window_size, *, sigma=2, tau=2):
                 if j < 0 or j + y == width:
                     continue
 
-                try:
-                    w_value = w(img, x, y, i, j, sigma=sigma, tau=tau)
-                    numerator += w_value * img[x + i][y + j]
-                    denominator += w_value
-                except Exception as e:
-                    a = 2
+                w_value = w(img, x, y, i, j, sigma=sigma, tau=tau)
+                numerator += w_value * img[x + i][y + j]
+                denominator += w_value
 
         return numerator / denominator
 
     for x in range(img.shape[0]):
         for y in range(img.shape[1]):
             new_img[x][y] = _bilateral_filtering(x, y)
-            a = img[x][y]
-            b = new_img[x][y]
-            c = 2
 
     return new_img
 
@@ -477,8 +505,8 @@ def task4_2():
     eight = np.array(Image.open("Week1/Images/eight.tif").convert('L'))
     eight_gauss = np.array(random_noise(eight, mode='GAUSS'))
     eight_gauss_norm = eight_gauss
-    sigmas = [64, 128, 256, 512]#8, 16, 32]
-    taus = [0.05, 0.05, 0.05, 0.05]
+    sigmas = [1, 1, 1, 1]
+    taus = [0.05, 0.2, 0.5, 0.75]
 
     window_size = 3
 
@@ -503,13 +531,14 @@ def task4_2():
 
 if __name__ == '__main__':
     # task1_1()
-    #task1_2()
-    #task1_3()
-
-    task2_1()
-    #task2_2()
+    # task1_2()
+    # task1_3()
+    #
+    # task2_1()
+    # task2_2()
     # task2_4()
-    # task3_1()
+    task2_5()
+    #task3_1()
 
-    #task4_2()
+    task4_2()
     plt.show()
