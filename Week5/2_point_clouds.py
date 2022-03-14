@@ -2,7 +2,7 @@ import skimage
 import matplotlib.pyplot as plt
 import numpy as np
 from sklearn.ensemble import RandomForestClassifier
-from scipy.spatial import procrustes
+#from scipy.spatial import procrustes
 
 
 def setup():
@@ -12,22 +12,43 @@ def setup():
     X_test_classes = np.loadtxt('diatom/SIPdiatomsTest_classes.txt', delimiter = ',')
     return X_train, X_test, X_train_classes, X_test_classes
 
+def procrustes(target, train):
+    target_pro = np.copy(target)
+    train_pro = np.copy(train)
+
+    # Translational Alignment
+    target_pro -= np.mean(target_pro, 0)
+    train_pro -= np.mean(train_pro, 0)
+    
+    target_pro /= np.linalg.norm(target_pro)
+    train_pro /= np.linalg.norm(train_pro)
+    
+    # Rotational Alignment
+    U, s, V = np.linalg.svd(np.dot(train_pro.T, target_pro))
+    R = np.dot(U, V.T)
+    train_pro = np.dot(train_pro, R) 
+
+    # Scaling Alignment
+    train_pro = (train_pro * s.sum())
+    return target_pro, train_pro
+
 
 def procrustes_tranform(dataset):
-    X_train, _, _, _ = setup()
+    X_train, _, _, _  = setup()
 
     target_points = np.stack((X_train[0, 0::2], X_train[0, 1::2]), axis=1)
     train_points = np.stack((dataset[0:, 0::2], dataset[0:, 1::2]), axis=2)
 
     # Procrustes takes a target, and an entry to be transformed
-    mtxs = [procrustes(target_points, train_points[i]) for i in range(len(dataset))]
+    pro = [procrustes(target_points, train_points[i]) for i in range(len(dataset))]
 
-    mtxs = np.array(mtxs, dtype=object)
+    pro = np.array(pro, dtype=object)
 
     # Unpack variables
-    mtx1s, mtx2s, disparities = mtxs[:,0], mtxs[:,1], mtxs[:,2]
+    target_pro, train_pro = pro[:,0], pro[:,1]
+
     # We're interrested in mtx2s for task 2.2, and return as same format and shape as dataset:
-    return np.array([mtx2s[i].flatten() for i in range(len(dataset))])
+    return np.array([train_pro[i].flatten() for i in range(len(dataset))])
 
 
 def task2_1(plot=False):
@@ -39,10 +60,10 @@ def task2_1(plot=False):
     train_ys = X_train[0:, 1::2]
 
     # example usage mtx2s[diatom idx][:,0] all x values for post-procrustes for diatom idx in train_points:
-    mtx2s = procrustes_tranform(X_train)
+    train_pro = procrustes_tranform(X_train)
     
     # Standardize target point to illustrate with post-procrustes example diatoms 
-    target_standard, _, _ = procrustes(target_points, target_points)
+    target_standard, _ = procrustes(target_points, target_points)
 
     if plot:
         fig, axs = plt.subplots(1, 3, figsize=(12, 4))
@@ -57,9 +78,9 @@ def task2_1(plot=False):
         axs[1].scatter(train_xs[3], train_ys[3], color='y', marker='3')
         axs[1].set_title("Pre-Procrustes Diatoms Original")
 
-        axs[2].scatter(mtx2s[1][0::2], mtx2s[1][1::2], color='b', marker='1')
-        axs[2].scatter(mtx2s[2][0::2], mtx2s[2][1::2], color='g', marker='2')
-        axs[2].scatter(mtx2s[3][0::2], mtx2s[3][1::2], color='y', marker='3')
+        axs[2].scatter(train_pro[1][0::2], train_pro[1][1::2], color='b', marker='1')
+        axs[2].scatter(train_pro[2][0::2], train_pro[2][1::2], color='g', marker='2')
+        axs[2].scatter(train_pro[3][0::2], train_pro[3][1::2], color='y', marker='3')
         axs[2].set_title("Post-Procrustes Diatoms")
 
         fig.suptitle("Procrustes Transformation with target diatom in red")
@@ -85,9 +106,8 @@ def task2_2():
     y_preds = clf2.predict(X_test_procrusted)
     acc_post = clf2.score(X_test_procrusted, X_test_y)
     
-
-    print("Accuracy for kNN on pre-Procrustes: %.4f" %acc_pre)
-    print("Accuracy for kNN on post-Procrustes: %.4f" %acc_post)
+    print("Accuracy for RFC on pre-Procrustes: %.4f" %acc_pre)
+    print("Accuracy for RFC on post-Procrustes: %.4f" %acc_post)
 
 if __name__ == '__main__':
     task2_1(plot=True)
