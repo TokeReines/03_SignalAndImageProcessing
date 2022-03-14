@@ -47,7 +47,7 @@ def procrustes_tranform(dataset):
     # Unpack variables
     target_pro, train_pro = pro[:,0], pro[:,1]
 
-    # We're interrested in mtx2s for task 2.2, and return as same format and shape as dataset:
+    # We're interrested in train_pro for task 2.2, and return as same format and shape as dataset:
     return np.array([train_pro[i].flatten() for i in range(len(dataset))])
 
 
@@ -59,7 +59,7 @@ def task2_1(plot=False):
     train_xs = X_train[0:, ::2]
     train_ys = X_train[0:, 1::2]
 
-    # example usage mtx2s[diatom idx][:,0] all x values for post-procrustes for diatom idx in train_points:
+    # example usage pro[diatom idx][:,0] all x values for post-procrustes for diatom idx in train_points:
     train_pro = procrustes_tranform(X_train)
     
     # Standardize target point to illustrate with post-procrustes example diatoms 
