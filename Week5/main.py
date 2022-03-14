@@ -1,7 +1,6 @@
 import skimage
 import matplotlib.pyplot as plt
 import numpy as np
-import matplotlib.pyplot as plt
 from sklearn.ensemble import RandomForestClassifier
 from scipy.spatial import procrustes
 
@@ -15,7 +14,7 @@ def setup():
 
 
 def procrustes_tranform(dataset):
-    X_train, X_test, X_train_y, X_test_y = setup()
+    X_train, _, _, _ = setup()
 
     target_points = np.stack((X_train[0, 0::2], X_train[0, 1::2]), axis=1)
     train_points = np.stack((dataset[0:, 0::2], dataset[0:, 1::2]), axis=2)
@@ -38,8 +37,7 @@ def task2_1(plot=False):
 
     train_xs = X_train[0:, ::2]
     train_ys = X_train[0:, 1::2]
-    
-    train_points = np.stack((train_xs, train_ys), axis=2)
+
     # example usage mtx2s[diatom idx][:,0] all x values for post-procrustes for diatom idx in train_points:
     mtx2s = procrustes_tranform(X_train)
     
@@ -71,21 +69,22 @@ def task2_1(plot=False):
 
 def task2_2():
     # First fit an RF on train set with no Procrustes transformation
-    clf = RandomForestClassifier()
+    clf = RandomForestClassifier(n_estimators=180)
     X_train, X_test, X_train_y, X_test_y = setup()  
     clf.fit(X_train, X_train_y)
     # Predictions on the test set
     y_preds = clf.predict(X_test)
-    acc_pre = sum(y_preds==X_test_y)/len(X_test_y)
+    acc_pre = clf.score(X_test, X_test_y)
  
     # Fit another RF on Procrustes transformed entries
-    clf2 = RandomForestClassifier()
+    clf2 = RandomForestClassifier(n_estimators=180)
     X_train_procrustes = procrustes_tranform(X_train)
     X_test_procrusted = procrustes_tranform(X_test)
     clf2.fit(X_train_procrustes, X_train_y)
     # Predictions on the standardised test set
     y_preds = clf2.predict(X_test_procrusted)
-    acc_post = sum(y_preds==X_test_y)/len(X_test_y)
+    acc_post = clf2.score(X_test_procrusted, X_test_y)
+    
 
     print("Accuracy for kNN on pre-Procrustes: %.4f" %acc_pre)
     print("Accuracy for kNN on post-Procrustes: %.4f" %acc_post)
