@@ -1,5 +1,4 @@
-# Assignment
-
+# Assignment 5
 
 # Packages
 
@@ -63,9 +62,9 @@ axs = axs.ravel()
 axs[0].imshow(I, cmap="gray")
 axs[0].set_title("Original Image")
 axs[1].imshow(I_1, cmap="gray")
-axs[1].set_title("Translation one to right and one up")
+axs[1].set_title("Translating one to right and one up")
 axs[2].imshow(I_2, cmap="gray")
-axs[2].set_title("Translation one to left and one down")
+axs[2].set_title("Translating one to left and one down")
 show()
 
 
@@ -100,7 +99,7 @@ axs = axs.ravel()
 axs[0].imshow(I, cmap="gray")
 axs[0].set_title("Original Image")
 axs[1].imshow(I_t, cmap="gray")
-axs[1].set_title("Translating by $t =(0.6, 1.2)^{T}$")
+axs[1].set_title("Translating by $t =(0.6 \ 1.2)^{T}$")
 show()
 
 
@@ -125,9 +124,9 @@ axs = axs.ravel()
 axs[0].imshow(I, cmap="gray")
 axs[0].set_title("Original Image")
 axs[1].imshow(I_shift, cmap="gray")
-axs[1].set_title("Translating two left and two down \n (Space domain)")
+axs[1].set_title("Translating one left and one down \n (Space domain)")
 axs[2].imshow(I_F, cmap="gray")
-axs[2].set_title("Translating two left and two down \n (Fourier method)")
+axs[2].set_title("Translating one left and one down \n (Fourier method)")
 show()
 
 
@@ -145,9 +144,9 @@ axs = axs.ravel()
 axs[0].imshow(I, cmap="gray")
 axs[0].set_title("Original Image")
 axs[1].imshow(I_F, cmap="gray")
-axs[1].set_title("Translating by $t =(0.6, 1.2)^{T}$ (Fourier method)")
+axs[1].set_title("Translating by $t =(0.6 \ 1.2)^{T}$ (Fourier method)")
 axs[2].imshow(I_F, cmap="gray")
-axs[2].set_title("Translating by $t =(0.6, 1.2)^{T}$ (fourier_shift)")
+axs[2].set_title("Translating by $t =(0.6 \ 1.2)^{T}$ (fourier_shift)")
 show()
 
 
@@ -159,16 +158,16 @@ fig, axs = plt.subplots(1, 2, figsize=(15, 6), facecolor='w', edgecolor='k')
 axs[0].imshow(I_cam, cmap="gray")
 axs[0].set_title("Cameraman")
 axs[1].imshow(I_F, cmap="gray")
-axs[1].set_title("Translating by $t =(0.6, 1.2)^{T}$ (Fourier method)")
+axs[1].set_title("Translating by $t =(0.6 \ 1.2)^{T}$ (Fourier method)")
 show()
 
 # Circles.
 I_circles = imread("circles.png")
-I_F = Fourier_translation(I_trui, 0.6, 1.2)
+I_F = Fourier_translation(I_circles, 0.6, 1.2)
 
 fig, axs = plt.subplots(1, 2, figsize=(15, 6), facecolor='w', edgecolor='k')
-axs[0].imshow(I_trui, cmap="gray")
+axs[0].imshow(I_circles, cmap="gray")
 axs[0].set_title("Circles")
 axs[1].imshow(I_F, cmap="gray")
-axs[1].set_title("Translating by $t =(0.6, 1.2)^{T}$ (Fourier method)")
+axs[1].set_title("Translating by $t =(0.6 \ 1.2)^{T}$ (Fourier method)")
 show()
