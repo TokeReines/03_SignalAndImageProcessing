@@ -2,8 +2,6 @@ import skimage
 import matplotlib.pyplot as plt
 import numpy as np
 from sklearn.ensemble import RandomForestClassifier
-#from scipy.spatial import procrustes
-
 
 def setup():
     X_train = np.loadtxt('diatom/SIPdiatomsTrain.txt', delimiter = ',')
