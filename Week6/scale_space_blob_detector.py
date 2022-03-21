@@ -6,6 +6,8 @@
 # Packages
 
 # Numpy, Matplotlib and miscellaneous
+import itertools
+
 import numpy as np
 import matplotlib.pyplot as plt
 from matplotlib.pyplot import axis, imshow, show, title, colorbar, figure
@@ -18,7 +20,8 @@ from skimage.io import imread
 # Scipy.
 from scipy import stats
 import scipy.signal
-from scipy.signal import convolve2d, gaussian, fftconvolve
+from scipy.signal.windows import gaussian
+from scipy.signal import convolve2d, fftconvolve
 from scipy.ndimage import median_filter, gaussian_filter, convolve
 from scipy import interpolate
 from scipy import ndimage
@@ -32,7 +35,7 @@ from skimage.feature import peak_local_max
 def Exercise_2_1():
     def G(size, sigma):
         # https://stackoverflow.com/questions/29731726/how-to-calculate-a-gaussian-kernel-matrix-efficiently-in-numpy
-        ax = np.linspace(-(size - 1) // 2, (size - 1) // 2, L)
+        ax = np.linspace(-(size - 1) // 2, (size - 1) // 2, size)
         gauss = (1 / (np.sqrt(2 * np.pi) * sigma)) * np.exp(-0.5 * np.square(ax) / np.square(sigma))
         kernel = np.outer(gauss, gauss)
         return kernel / np.sum(kernel)
@@ -42,7 +45,7 @@ def Exercise_2_1():
     s1 = G(L, 1)
     s2 = G(L, 2)
     s3 = G(L, sigma=np.sqrt(1**2 + 2**2))
-    s_convo = fftconvolve(s1, s2, mode="same")
+    s_convo = fftconvolve(s2, s2, mode="same")
     s_diff = np.clip(s3 - s2, 0, 1)
 
     # Plotting
@@ -100,3 +103,47 @@ def Exercise_2_3():
     plt.ylabel("$H(0,0,\\tau)$")
     plt.tight_layout()
     plt.show()
+
+def Exercise_2_4():
+    def G(size, sigma):
+        #size = abs(int(2 * sigma))
+        # https://stackoverflow.com/questions/29731726/how-to-calculate-a-gaussian-kernel-matrix-efficiently-in-numpy
+        ax = np.linspace(-(size - 1) // 2, (size - 1) // 2, size)
+        gauss = (1 / (np.sqrt(2 * np.pi) * sigma)) * np.exp(-0.5 * np.square(ax) / np.square(sigma))
+        kernel = np.outer(gauss, gauss)
+        return kernel / np.sum(kernel)
+
+    image = imread("Week6/images/sunflower.tiff", as_gray=True)
+    size = 10
+    def laplace(tau):
+        gauss = G(size, tau)
+        x_kernel = np.diff(np.diff(gauss, axis=0), axis=0)
+        i_xx = convolve2d(image, x_kernel, mode="same")
+
+        y_kernel = np.diff(np.diff(gauss, axis=1), axis=1)
+        i_yy = convolve2d(image, y_kernel, mode="same")
+        return tau * (i_xx + i_yy)
+
+    n = 20
+    taus = np.linspace(1, 100, n)
+    ps = []
+    for tau in taus:
+        print("Doing tau", tau)
+        i = laplace(tau)
+
+        peaks = peak_local_max(i, num_peaks=150)
+        maximas = np.array(list(zip(peaks, i[peaks[...,0], peaks[...,1]], itertools.repeat(tau))))
+        ps.extend(maximas)
+
+    plt.imshow(image, cmap="gray")
+    top150 = np.array(sorted(ps, key=lambda p: abs(p[1]), reverse=True)[:150])
+    for peaks, value, tau in top150:
+        if not peaks.any():
+            print("No peaks at tau", tau)
+            continue
+
+    plt.scatter([x for _, x in top150[:,0]], [y for y, _ in top150[:,0]], color='r', marker='o', s=list(top150[:,2]), alpha=0.3)
+    plt.show()
+
+if __name__ == '__main__':
+    Exercise_2_4()

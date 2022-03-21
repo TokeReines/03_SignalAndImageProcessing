@@ -10,7 +10,6 @@ def task3_1(sigma=0.1):
 
 
     points = np.fromfunction(_soft_edge, (16, 16), dtype=float)
-    print(points)
     img = np.cumsum(points, axis=1)
     plt.imshow(img, cmap='gray')
 
