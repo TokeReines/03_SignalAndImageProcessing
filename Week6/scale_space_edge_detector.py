@@ -10,23 +10,38 @@ def G(size, sigma):
     kernel = np.outer(gauss, gauss)
     return kernel / np.sum(kernel)
 
-def task3_1(sigma=0.1):
+def task3_1():
+    def _soft_edge(size, sigma=2):
+        ax = np.meshgrid(range(size), range(size), indexing='xy')
+        x = [(x - ((size - 1) / 2)) for x in ax]
+        gauss = [(1 / (np.sqrt(2 * np.pi * sigma ** 2))) * np.exp(-((x ** 2) / (2 * sigma ** 2))) for x in x[0]]
+        return np.cumsum(gauss, axis=1)
 
-    def _soft_edge(y, x, sigma=2):
-        x = (x - ((len(x) - 1) / 2))
-        gauss = 1 / (np.sqrt(2 * np.pi * sigma ** 2)) * np.exp(-((x ** 2) / (2 * sigma ** 2)))
-        return gauss
 
-    size = (16, 16)
-    points = np.fromfunction(_soft_edge, size, dtype=float)
-    img = np.cumsum(points, axis=1)
+    size = 32
+    taus = [1, 1,2,5,10,15,20,30]
+    img = _soft_edge(size)
+
     
-    x_kernel = G(size, 1)
-    img_scale_space = convolve2d(img, gaussian_kernel, mode="same")
+
+    fig, axs = plt.subplots(2, 4, figsize=(15, 6))
     
-    fig, axs = plt.subplots(1, 2, figsize=(15, 6))
-    axs[0].imshow(img, cmap='gray')
-    axs[1].imshow(img_scale_space, cmap='gray')
+
+    for i, tau in enumerate(taus):
+        img_scale_space = convolve2d(img, G(size, tau), mode="same", boundary='symm')
+        if i > 3:
+            axs[1][i-8].imshow(img_scale_space, cmap='gray')
+            axs[1][i-8].set_title("J(x,y,{})".format(tau))
+            axs[1][i-8].axis("off")
+        else:
+            axs[0][i].imshow(img_scale_space, cmap='gray')
+            axs[0][i].set_title("J(x,y,{})".format(tau))
+            axs[0][i].axis("off")
+
+            
+    axs[0][0].imshow(img, cmap='gray')
+    axs[0][0].set_title("S(x,y)")
+
 
 if __name__ == "__main__":
     task3_1()
