@@ -39,7 +39,8 @@ def task3_1():
             axs[0][i].axis("off")
 
             
-    axs[0][0].imshow(img, cmap='gray')
+    a = axs[0][0].imshow(img, cmap='gray')
+    fig.colorbar(a, ax=axs[0][0])
     axs[0][0].set_title("S(x,y)")
 
 
