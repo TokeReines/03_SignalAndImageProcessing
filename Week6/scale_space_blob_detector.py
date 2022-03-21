@@ -10,6 +10,7 @@ import itertools
 
 import numpy as np
 import matplotlib.pyplot as plt
+from matplotlib.patches import Circle
 from matplotlib.pyplot import axis, imshow, show, title, colorbar, figure
 import math
 
@@ -105,16 +106,16 @@ def Exercise_2_3():
     plt.show()
 
 def Exercise_2_4():
+    image = imread("Week6/images/sunflower.tiff", as_gray=True)
+
     def G(size, sigma):
-        #size = abs(int(2 * sigma))
         # https://stackoverflow.com/questions/29731726/how-to-calculate-a-gaussian-kernel-matrix-efficiently-in-numpy
         ax = np.linspace(-(size - 1) // 2, (size - 1) // 2, size)
         gauss = (1 / (np.sqrt(2 * np.pi) * sigma)) * np.exp(-0.5 * np.square(ax) / np.square(sigma))
         kernel = np.outer(gauss, gauss)
         return kernel / np.sum(kernel)
 
-    image = imread("Week6/images/sunflower.tiff", as_gray=True)
-    size = 10
+    size = 20
     def laplace(tau):
         gauss = G(size, tau)
         x_kernel = np.diff(np.diff(gauss, axis=0), axis=0)
@@ -125,24 +126,47 @@ def Exercise_2_4():
         return tau * (i_xx + i_yy)
 
     n = 20
-    taus = np.linspace(1, 100, n)
-    ps = []
+    taus = np.linspace(0.5, 60, n)
+    min_ps = []
+    max_ps = []
     for tau in taus:
         print("Doing tau", tau)
         i = laplace(tau)
-
-        peaks = peak_local_max(i, num_peaks=150)
-        maximas = np.array(list(zip(peaks, i[peaks[...,0], peaks[...,1]], itertools.repeat(tau))))
-        ps.extend(maximas)
-
-    plt.imshow(image, cmap="gray")
-    top150 = np.array(sorted(ps, key=lambda p: abs(p[1]), reverse=True)[:150])
-    for peaks, value, tau in top150:
-        if not peaks.any():
-            print("No peaks at tau", tau)
+        max_peaks = peak_local_max(i, num_peaks=75/n)
+        min_peaks = peak_local_max(i * -1, num_peaks=75/n)
+        if not max_peaks.any() and not min_peaks.any():
             continue
 
-    plt.scatter([x for _, x in top150[:,0]], [y for y, _ in top150[:,0]], color='r', marker='o', s=list(top150[:,2]), alpha=0.3)
+        maximas = np.array(list(zip(max_peaks, i[max_peaks[...,0], max_peaks[...,1]], itertools.repeat(tau))))
+        max_ps.extend(maximas)
+        minimas = np.array(list(zip(min_peaks, i[min_peaks[...,0], min_peaks[...,1]], itertools.repeat(tau))))
+        min_ps.extend(minimas)
+
+        # fig, ax = plt.subplots(1)
+        # ax.set_title(tau)
+        # for peak, value, tau in maximas:
+        #     if not peak.any():
+        #         print("No peaks at tau", tau)
+        #         continue
+        #     ax.add_patch(Circle((peak[1], peak[0]), tau / 2, fill=False, color='red'))
+        # ax.scatter([x for _, x in maximas[:,0]], [y for y, _ in maximas[:,0]], color='r', marker='o')
+        # imshow = ax.imshow(i, cmap="gray")
+        # fig.colorbar(imshow, ax=ax)
+
+    fig, ax = plt.subplots(1)
+    imshow = ax.imshow(image, cmap="gray")
+    for peak, value, tau in max_ps:
+        ax.add_patch(Circle((peak[1], peak[0]), tau/2, fill=False, color='red'))
+
+    for peak, value, tau in min_ps:
+        ax.add_patch(Circle((peak[1], peak[0]), tau/2, fill=False, color='blue'))
+
+    max_ps = np.array(max_ps)
+    min_ps = np.array(min_ps)
+    s1 = ax.scatter([x for _, x in max_ps[:,0]], [y for y, _ in max_ps[:,0]], color='r', marker='o', label="Maxima")
+    s2 = ax.scatter([x for _, x in min_ps[:,0]], [y for y, _ in min_ps[:,0]], color='b', marker='o', label="Minima")
+    ax.legend(handles=[s1, s2])
+    fig.colorbar(imshow, ax=ax)
     plt.show()
 
 if __name__ == '__main__':
