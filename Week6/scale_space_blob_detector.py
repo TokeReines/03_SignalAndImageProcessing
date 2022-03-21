@@ -119,21 +119,21 @@ def Exercise_2_4():
     def laplace(tau):
         gauss = G(size, tau)
         x_kernel = np.diff(np.diff(gauss, axis=0), axis=0)
-        i_xx = convolve2d(image, x_kernel, mode="same")
+        i_xx = convolve2d(image, x_kernel, mode="same", boundary='symm')
 
         y_kernel = np.diff(np.diff(gauss, axis=1), axis=1)
-        i_yy = convolve2d(image, y_kernel, mode="same")
+        i_yy = convolve2d(image, y_kernel, mode="same", boundary='symm')
         return tau * (i_xx + i_yy)
 
-    n = 20
-    taus = np.linspace(0.5, 60, n)
+    steps = 20
+    taus = np.logspace(-2, 3, steps, base=2)
     min_ps = []
     max_ps = []
     for tau in taus:
         print("Doing tau", tau)
         i = laplace(tau)
-        max_peaks = peak_local_max(i, num_peaks=75/n)
-        min_peaks = peak_local_max(i * -1, num_peaks=75/n)
+        max_peaks = peak_local_max(i, num_peaks=75/steps)
+        min_peaks = peak_local_max(i * -1, num_peaks=75/steps)
         if not max_peaks.any() and not min_peaks.any():
             continue
 
@@ -156,10 +156,10 @@ def Exercise_2_4():
     fig, ax = plt.subplots(1)
     imshow = ax.imshow(image, cmap="gray")
     for peak, value, tau in max_ps:
-        ax.add_patch(Circle((peak[1], peak[0]), tau/2, fill=False, color='red'))
+        ax.add_patch(Circle((peak[1], peak[0]), tau, fill=False, color='red'))
 
     for peak, value, tau in min_ps:
-        ax.add_patch(Circle((peak[1], peak[0]), tau/2, fill=False, color='blue'))
+        ax.add_patch(Circle((peak[1], peak[0]), tau, fill=False, color='blue'))
 
     max_ps = np.array(max_ps)
     min_ps = np.array(min_ps)
