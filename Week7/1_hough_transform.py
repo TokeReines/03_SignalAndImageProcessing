@@ -35,9 +35,6 @@ def line_hough_transform(image, theta_res: int =0.5, rho_res: float = 1):
     """
 
     rho_max = int(math.hypot(*image.shape))
-    #rhos = np.arange(-rho_max, rho_max, rho_res)
-    # rhos = np.linspace(-rho_max, rho_max, int(rho_max * 2))
-    #rhos = np.arange(-rho_max, rho_max, rho_res)
     rhos = np.arange(-rho_max, rho_max, rho_res)
 
     thetas = np.deg2rad(np.arange(-90, 90, theta_res))
