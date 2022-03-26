@@ -10,7 +10,7 @@ from skimage.feature import peak_local_max
 from skimage.io import imread
 
 
-def line_hough_transform(image, theta_res: int = 1., rho_res: float = 1):
+def line_hough_transform(image, theta_res: int = 1, rho_res: float = 1):
     """
     Image space dots are lines in parameterspace. Dots can be edges in a binary image constructed by edge detection.
 
@@ -36,7 +36,7 @@ def line_hough_transform(image, theta_res: int = 1., rho_res: float = 1):
     """
 
     rho_max = math.hypot(*image.shape)
-    rhos = np.arange(-rho_max, rho_max + 1, rho_res)
+    rhos = np.arange(-rho_max // 2, rho_max // 2, rho_res)
 
     thetas = np.deg2rad(np.arange(-90, 90, theta_res))
     thetas_is = np.arange(0, len(thetas))
@@ -48,8 +48,8 @@ def line_hough_transform(image, theta_res: int = 1., rho_res: float = 1):
             if image[x, y] == 0:
                 continue
 
-            rho = np.rint(x * np.cos(thetas) - y * np.sin(thetas)).astype('int32')
-            hough_space[rho, thetas_is] += 1
+            rhos_is = np.rint(x * np.cos(thetas) - y * np.sin(thetas)).astype('int32')
+            hough_space[rhos_is, thetas_is] += 1
 
     return hough_space, rhos, thetas
 
