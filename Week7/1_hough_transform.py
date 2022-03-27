@@ -9,7 +9,7 @@ from skimage.feature import peak_local_max
 from skimage.io import imread
 
 
-def line_hough_transform(image, theta_res: int =0.5, rho_res: float = 1):
+def line_hough_transform(image, theta_res: int = 1, rho_res: int = 1):
     """
     Image space dots are lines in parameterspace. Dots can be edges in a binary image constructed by edge detection.
 
@@ -26,8 +26,8 @@ def line_hough_transform(image, theta_res: int =0.5, rho_res: float = 1):
     Where 0 <= theta <= pi, and p <= image diagonal
 
     Args:
-        rho_res: Stepsize from -diagonal/2 to diagonal/2
-        theta_res: Stepsize of theta. 1.0 is one ray per degree from -90 to 90, 2.0 is 1 ray per 2 degrees.
+        rho_res: Steps pr rho (2x diagonal)
+        theta_res: Steps per degree of theta
         image: Binary image with edges from edge detection. As a numpy array
 
     Returns:
@@ -35,9 +35,12 @@ def line_hough_transform(image, theta_res: int =0.5, rho_res: float = 1):
     """
 
     rho_max = int(math.hypot(*image.shape))
-    rhos = np.arange(-rho_max, rho_max, rho_res)
+    num_rhos = rho_max * rho_res * 2
+    rhos = np.linspace(-rho_max, rho_max, num_rhos)
 
-    thetas = np.deg2rad(np.arange(-90, 90, theta_res))
+    # Thetas from -90 to 90 (180 degrees) in radians
+    num_thetas = theta_res * 180
+    thetas = np.linspace(-math.pi / 2, math.pi / 2, num_thetas)
     thetas_is = np.arange(0, len(thetas))
 
     hough_space = np.zeros((len(rhos), len(thetas)))
@@ -52,6 +55,7 @@ def line_hough_transform(image, theta_res: int =0.5, rho_res: float = 1):
 
     return hough_space, thetas, rhos
 
+
 def hough_lines(image, hough_image, thetas, rhos, num_peaks=4):
     def calc_y(x, theta, rho):
         if theta == 0.0:
@@ -60,7 +64,7 @@ def hough_lines(image, hough_image, thetas, rhos, num_peaks=4):
 
     peaks = peak_local_max(hough_image, num_peaks=num_peaks)
     lines = []
-    for rho_i, theta_i in peaks: # row, col
+    for rho_i, theta_i in peaks:  # row, col
         theta = thetas[theta_i]
         rho = rhos[rho_i]
         x1 = 0
@@ -72,22 +76,21 @@ def hough_lines(image, hough_image, thetas, rhos, num_peaks=4):
 
 
 if __name__ == '__main__':
-    image = imread("Week7/images/line.png", as_gray=True)
+    image = imread("Week7/images/cross.png", as_gray=True)
 
-    hough_image, thetas, rhos = line_hough_transform(image)
-    lines, peaks = hough_lines(image, hough_image, thetas, rhos, num_peaks=1)
+    hough_image, thetas, rhos = line_hough_transform(image, 1, 1)
+    lines, peaks = hough_lines(image, hough_image, thetas, rhos, num_peaks=2)
 
     fig, axs = plt.subplots(1, 2, figsize=(16, 8))
-    axs[0].set_xlim([0, image.shape[0] -1])
-    axs[0].set_ylim([0, image.shape[0]- 1])
+    axs[0].set_xlim([0, image.shape[0] - 1])
+    axs[0].set_ylim([image.shape[0] - 1, 0])
     axs[0].imshow(image, cmap='gray')
     colors = ['r', 'b', 'green', 'orange']
-    for i, line in enumerate(lines):
-        #axs[0].scatter(line[0], line[1], c=colors[i])
+    for i, (line, peak) in enumerate(zip(lines, peaks)):
         axs[0].plot(line[0], line[1], c=colors[i])
+        sc = axs[1].scatter(peak[1], peak[0], s=200, marker='s', edgecolors=colors[i])
+        sc.set_facecolor("none")
     axs[1].imshow(hough_image, cmap='inferno')
-    sc = axs[1].scatter(peaks[:,1], peaks[:,0], s=200, marker='s', edgecolors= 'white')
-    sc.set_facecolor("none")
     axs[1].set_xlabel('theta')
     axs[1].set_ylabel('rho')
     plt.show()
