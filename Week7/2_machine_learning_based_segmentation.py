@@ -79,7 +79,7 @@ def task2_2():
 
     model.evaluate(x_test_reshape, y_test)
 
-def task3_3(plot=True):
+def task2_3(plot=True, debug=False):
     def extract_patches(tensor, shape=(29,29)):
         shaped = tf.expand_dims(tensor, axis=-1) # adds batch = ->[batch, in_rows, in_cols, depth].
         patch = tf.image.extract_patches(images=shaped,
@@ -96,16 +96,21 @@ def task3_3(plot=True):
 
     imgs = []
     segs = []
-
+    paths = []
     for img in glob.iglob(f'{img_folder}/*'):
         imgs.append(np.expand_dims(imread(img), axis=0)) # add channel dimension (1 for grayscale)
-        
+        paths.append(img)
+
     for seg in glob.iglob(f'{seg_folder}/*'):
         segs.append(imread(seg))
     
     # Debug mode: use 
-    print("Compiling patches into dataset:")
-    x_test = np.array([extract_patches(img) for img in tqdm(imgs)]) 
+    print("Compiling 20 images to patches:")
+    if debug:
+        x_test = np.array([extract_patches(imgs)])
+    else:
+        x_test = np.array([extract_patches(img) for img in tqdm(imgs)]) 
+
     x_test_reshaped = x_test.reshape((-1,29,29,1))
 
     # Debug mode: use x_test.reshaped[0]
@@ -113,24 +118,70 @@ def task3_3(plot=True):
     prediction = model.predict(x_test_reshaped, verbose=1)
 
     new_segmentations = np.argmax(prediction, axis=1).reshape(-1, 256, 256)
+
     if plot:
-        fig, axs = plt.subplots(1, 3, figsize=(16, 8))
+        if debug:
+            fig, axs = plt.subplots(1, 3, figsize=(16, 8))
 
-        axs[0].imshow(np.squeeze(imgs[0]), cmap='gray')
-        axs[1].imshow(segs[0], cmap='gray', vmin=0, vmax=135)
-        im = axs[2].imshow(new_segmentations[0], cmap='gray', vmin=0, vmax=134)
+            axs[0].imshow(np.squeeze(imgs[0]), cmap='gray')
+            axs[1].imshow(segs[0], cmap='gray', vmin=0, vmax=135)
+            im = axs[2].imshow(new_segmentations[0], cmap='gray', vmin=0, vmax=134)
 
-        divider = make_axes_locatable(axs[2])
-        cax = divider.append_axes('right', size='5%', pad=0.05)
+            divider = make_axes_locatable(axs[2])
+            cax = divider.append_axes('right', size='5%', pad=0.05)
 
-        fig.colorbar(im, cax=cax, orientation='vertical')
+            fig.colorbar(im, cax=cax, orientation='vertical')
+        else:
+            i = np.random.randint(0,18)
+            
+            fig, axs = plt.subplots(2, 3, figsize=(16, 8))
+
+            axs[0][0].imshow(np.squeeze(imgs[i]), cmap='gray')
+            axs[0][0].set_title("{}".format(paths[i]))
+            axs[0][1].set_title("Ground Truth")
+            axs[0][2].set_title("Prediction")
+            axs[0][1].imshow(segs[i], cmap='gray', vmin=0, vmax=135)
+            im = axs[0][2].imshow(new_segmentations[i], cmap='gray', vmin=0, vmax=134)
+
+            divider = make_axes_locatable(axs[0][2])
+            cax = divider.append_axes('right', size='5%', pad=0.05)
+
+            fig.colorbar(im, cax=cax, orientation='vertical')
+
+            axs[1][0].imshow(np.squeeze(imgs[i+1]), cmap='gray')
+            axs[1][1].imshow(segs[i+1], cmap='gray', vmin=0, vmax=135)
+            axs[1][0].set_title("{}".format(paths[i+1]))
+            axs[1][1].set_title("Ground Truth")
+            axs[1][2].set_title("Prediction")
+            im1 = axs[1][2].imshow(new_segmentations[i+1], cmap='gray', vmin=0, vmax=134)
+
+            divider = make_axes_locatable(axs[1][2])
+            cax = divider.append_axes('right', size='5%', pad=0.05)
+
+            fig.colorbar(im1, cax=cax, orientation='vertical')
+            
         plt.show()
 
-    return new_segmentations
+    return new_segmentations, segs
 
+def task2_4(predictions, gt):
+    def _dice(gt, pred, i):
+        gt = gt.flatten()
+        pred = pred.flatten()
+        intersection = np.sum(pred[gt==i]) * 2.
+        dsc = intersection / (np.sum(pred) + np.sum(gt))
+        return dsc
 
+    def dsc_multilabel(gt, pred, n_classes=135):
+        dsc = 0
+        for i in range(n_classes):
+            dsc += _dice(gt, pred, i)
+        return dsc / n_classes
 
 if __name__=='__main__':
-    task2_2()
-    predictions = task3_3()
+    #task2_2()
+    predictions, ground_truth = task2_3(debug=False)
+    print(task2_4(predictions, ground_truth))
+
+
     
