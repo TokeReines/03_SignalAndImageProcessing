@@ -17,61 +17,62 @@ from tensorflow.keras.callbacks import EarlyStopping
 from tensorflow.keras.layers import Dense, Dropout, Flatten, Conv2D, MaxPool2D, InputLayer
 from tensorflow.keras.optimizers import Adam
 
+def setup():
+    ## Configure the network
+    # batch_size to traink
 
-## Configure the network
-# batch_size to traink
+    batch_size = 20 * 256
+    # number of output classes
+    nb_classes = 135
+    # number of epochs to train
+    nb_epoch = 400
 
-batch_size = 20 * 256
-# number of output classes
-nb_classes = 135
-# number of epochs to train
-nb_epoch = 400
+    # number of convolutional filters to use
+    nb_filters = 20
+    # size of pooling area for max pooling
+    nb_pool = 2
+    # convolution kernel size
+    nb_conv = 5
 
-# number of convolutional filters to use
-nb_filters = 20
-# size of pooling area for max pooling
-nb_pool = 2
-# convolution kernel size
-nb_conv = 5
+    model = Sequential([
+        InputLayer(input_shape=(29, 29, 1)),
+        Conv2D(filters=nb_filters, kernel_size=nb_conv, activation='relu'),
+        MaxPool2D(pool_size=(nb_pool, nb_pool)),
+        Dropout(0.5),
+        Conv2D(filters=nb_filters, kernel_size=nb_conv, activation='relu'),
+        MaxPool2D(pool_size=(nb_pool, nb_pool)),
+        Dropout(0.25),
+        Flatten(),
+        Dense(units=4000, activation='relu'),
+        Dense(units=nb_classes, activation='softmax'),
+    ])
+        
+    optimizer = Adam(lr=1e-4, epsilon=1e-08)
 
-model = Sequential([
-    InputLayer(input_shape=(29, 29, 1)),
-    Conv2D(filters=nb_filters, kernel_size=nb_conv, activation='relu'),
-    MaxPool2D(pool_size=(nb_pool, nb_pool)),
-    Dropout(0.5),
-    Conv2D(filters=nb_filters, kernel_size=nb_conv, activation='relu'),
-    MaxPool2D(pool_size=(nb_pool, nb_pool)),
-    Dropout(0.25),
-    Flatten(),
-    Dense(units=4000, activation='relu'),
-    Dense(units=nb_classes, activation='softmax'),
-])
-    
-optimizer = Adam(lr=1e-4, epsilon=1e-08)
-
-model.compile(optimizer=optimizer,
-            loss='categorical_crossentropy',
-            metrics=['accuracy'])
+    model.compile(optimizer=optimizer,
+                loss='categorical_crossentropy',
+                metrics=['accuracy'])
 
 
-## Train model - uncoment to perform the training yourself
-#
+    ## Train model - uncoment to perform the training yourself
+    #
 
-#train = numpy.load('train.npz')
-#x_train = train['x_train'].reshape((-1, 29, 29, 1))
-#y_train = train['y_train']
-#
-#early_stopping = EarlyStopping(patience=10)
-#history = model.fit(x_train, y_train, epochs=nb_epoch, batch_size=batch_size,
-#                    callbacks=[early_stopping], validation_split=0.2)
-#model.save_weights('keras.h5')
+    #train = numpy.load('train.npz')
+    #x_train = train['x_train'].reshape((-1, 29, 29, 1))
+    #y_train = train['y_train']
+    #
+    #early_stopping = EarlyStopping(patience=10)
+    #history = model.fit(x_train, y_train, epochs=nb_epoch, batch_size=batch_size,
+    #                    callbacks=[early_stopping], validation_split=0.2)
+    #model.save_weights('keras.h5')
 
-## Load the pretrained network
-model.load_weights('keras.h5') 
-
+    ## Load the pretrained network
+    model.load_weights('keras.h5') 
+    return model
 
 # # 2.2
 def task2_2():
+    model = setup()
     test = np.load('test.npz')
     x_test = test['x_test']
     y_test = test['y_test']
@@ -80,6 +81,7 @@ def task2_2():
     model.evaluate(x_test_reshape, y_test)
 
 def task2_3(plot=True, debug=False):
+    model = setup()
     def extract_patches(tensor, shape=(29,29)):
         shaped = tf.expand_dims(tensor, axis=-1) # adds batch = ->[batch, in_rows, in_cols, depth].
         patch = tf.image.extract_patches(images=shaped,
@@ -97,6 +99,7 @@ def task2_3(plot=True, debug=False):
     imgs = []
     segs = []
     paths = []
+
     for img in glob.iglob(f'{img_folder}/*'):
         imgs.append(np.expand_dims(imread(img), axis=0)) # add channel dimension (1 for grayscale)
         paths.append(img)
@@ -107,7 +110,7 @@ def task2_3(plot=True, debug=False):
     # Debug mode: use 
     print("Compiling 20 images to patches:")
     if debug:
-        x_test = np.array([extract_patches(imgs)])
+        x_test = np.array([extract_patches(imgs[0])])
     else:
         x_test = np.array([extract_patches(img) for img in tqdm(imgs)]) 
 
@@ -164,24 +167,43 @@ def task2_3(plot=True, debug=False):
 
     return new_segmentations, segs
 
-def task2_4(predictions, gt):
-    def _dice(gt, pred, i):
-        gt = gt.flatten()
-        pred = pred.flatten()
-        intersection = np.sum(pred[gt==i]) * 2.
-        dsc = intersection / (np.sum(pred) + np.sum(gt))
-        return dsc
+def task2_4(p, gt):
+    def dice_coef(truth, pred):
+        # https://stackoverflow.com/questions/31273652/how-to-calculate-dice-coefficient-for-measuring-accuracy-of-image-segmentation-i
+        y_true_f = tf.reshape(tf.dtypes.cast(truth, tf.float32), [-1])
+        y_pred_f = tf.reshape(tf.dtypes.cast(pred, tf.float32), [-1])
+        intersection = tf.reduce_sum(y_true_f * y_pred_f)
+        return (2. * intersection + 1.) / (tf.reduce_sum(y_true_f) + tf.reduce_sum(y_pred_f) + 1.)
 
-    def dsc_multilabel(gt, pred, n_classes=135):
-        dsc = 0
-        for i in range(n_classes):
-            dsc += _dice(gt, pred, i)
-        return dsc / n_classes
+    def our_dice(preds, truths):
+        diffs = []
+        for pred, truth in zip(preds, truths):
+            unique_truths = np.unique(truth)
+            unique_preds = np.unique(pred)
+            one_hot_labels = np.unique(np.append(unique_preds, unique_truths))
+            for o in one_hot_labels:
+                if o == 0:
+                    continue
+
+                truth_copy = truth.copy()
+                truth_copy[truth != o] = 0
+                truth_copy = truth_copy / o
+
+                pred_copy = pred.copy()
+                pred_copy[pred != o] = 0
+                pred_copy = pred_copy / o
+                diff = dice_coef(truth_copy, pred_copy)
+                diffs.append(diff)
+        return diffs
+
+    diffs = our_dice(p, gt)
+    print(np.mean(diffs))
+    return np.mean(diffs)
 
 if __name__=='__main__':
     #task2_2()
-    predictions, ground_truth = task2_3(debug=False)
-    print(task2_4(predictions, ground_truth))
+    predictions, ground_truth = task2_3(debug=False, plot=False)
+    task2_4(predictions, ground_truth)
 
 
     
